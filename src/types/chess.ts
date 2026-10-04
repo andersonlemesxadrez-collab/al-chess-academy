@@ -5,7 +5,7 @@ export type ActivityLogEntry = {
   studentId?: string;
   action: string;
   title?: string;
-  details?: string;
+  details?: string | Record<number, string>;
   xpEarned?: number;
   timestamp: string;
 };
@@ -24,9 +24,9 @@ export type Student = {
   name: string;
   password?: string;
   age?: number;
-  level?: number;
+  level?: number | string;
   rankName?: string;
-  levelRank?: string;
+  levelRank?: string | number;
   avatar: string | AvatarConfig;
   rating: number;
   streak: number;
@@ -42,14 +42,14 @@ export type Student = {
   unlockedAvatars: string[];
 };
 
-export type ContentType = 'tactics' | 'bot' | 'piece-capture' | 'pawn-battle' | 'didactic' | 'analysis' | 'puzzle' | 'game' | 'lesson' | 'bot_match' | 'piece_capture' | 'pawn_battle';
+export type ContentType = string;
 
 export type ContentItem = {
   id: string;
   title: string;
-  type: ContentType;
+  type: string;
   description: string;
-  difficulty: 'Iniciante' | 'Intermédio' | 'Avançado' | number;
+  difficulty: string | number;
   category?: string;
   tags?: string[];
   xpReward?: number;
@@ -66,13 +66,14 @@ export type TaskAssignment = {
   contentId: string;
   assignedDate?: string;
   assignedAt?: string;
-  completed: boolean;
-  status?: 'pending' | 'completed' | string;
+  completed?: boolean;
+  completedAt?: string;
+  status?: string;
   score?: number;
   attempts?: number;
   timeSpentSeconds?: number;
   firstTrySuccess?: boolean;
-  studentComments?: string;
+  studentComments?: string | Record<number, string>;
 };
 
 export type Achievement = {
