@@ -5,7 +5,7 @@ export type ActivityLogEntry = {
   studentId?: string;
   action: string;
   title?: string;
-  details?: string | Record<number, string>;
+  details?: any;
   xpEarned?: number;
   timestamp: string;
 };
@@ -24,10 +24,10 @@ export type Student = {
   name: string;
   password?: string;
   age?: number;
-  level?: number | string;
+  level?: any;
   rankName?: string;
-  levelRank?: string | number;
-  avatar: string | AvatarConfig;
+  levelRank?: any;
+  avatar: any;
   rating: number;
   streak: number;
   maxStreak?: number;
@@ -40,6 +40,7 @@ export type Student = {
   streakShields?: number;
   inventory?: string[];
   unlockedAvatars: string[];
+  enrolledSince?: string;
 };
 
 export type ContentType = string;
@@ -49,7 +50,7 @@ export type ContentItem = {
   title: string;
   type: string;
   description: string;
-  difficulty: string | number;
+  difficulty: any;
   category?: string;
   tags?: string[];
   xpReward?: number;
@@ -73,7 +74,7 @@ export type TaskAssignment = {
   attempts?: number;
   timeSpentSeconds?: number;
   firstTrySuccess?: boolean;
-  studentComments?: string | Record<number, string>;
+  studentComments?: any;
 };
 
 export type Achievement = {
