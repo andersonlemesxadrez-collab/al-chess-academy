@@ -2,31 +2,61 @@ export type UserRole = 'student' | 'teacher';
 
 export type ActivityLogEntry = {
   id: string;
+  studentId?: string;
   action: string;
+  title?: string;
+  details?: string;
+  xpEarned?: number;
   timestamp: string;
+};
+
+export type AvatarConfig = {
+  base: string;
+  color: string;
+  hair?: string;
+  hat?: string;
+  outfit?: string;
+  accessory?: string;
 };
 
 export type Student = {
   id: string;
   name: string;
-  avatar: string;
+  password?: string;
+  age?: number;
+  level?: number;
+  rankName?: string;
+  levelRank?: string;
+  avatar: string | AvatarConfig;
   rating: number;
   streak: number;
   maxStreak?: number;
   solvedCount: number;
   lastActiveDate?: string;
   coins: number;
+  xp?: number;
+  kidsMode?: boolean;
+  notes?: string;
+  streakShields?: number;
+  inventory?: string[];
   unlockedAvatars: string[];
 };
+
+export type ContentType = 'tactics' | 'bot' | 'piece-capture' | 'pawn-battle' | 'didactic' | 'analysis' | 'puzzle' | 'game' | 'lesson' | 'bot_match' | 'piece_capture' | 'pawn_battle';
 
 export type ContentItem = {
   id: string;
   title: string;
-  type: 'tactics' | 'bot' | 'piece-capture' | 'pawn-battle' | 'didactic' | 'analysis';
+  type: ContentType;
   description: string;
-  difficulty: 'Iniciante' | 'Intermédio' | 'Avançado';
+  difficulty: 'Iniciante' | 'Intermédio' | 'Avançado' | number;
+  category?: string;
+  tags?: string[];
+  xpReward?: number;
+  author?: string;
   pgn?: string;
   fen?: string;
+  data?: any;
   createdAt?: string;
 };
 
@@ -37,7 +67,25 @@ export type TaskAssignment = {
   assignedDate?: string;
   assignedAt?: string;
   completed: boolean;
+  status?: 'pending' | 'completed' | string;
   score?: number;
   attempts?: number;
   timeSpentSeconds?: number;
+  firstTrySuccess?: boolean;
+  studentComments?: string;
 };
+
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+};
+
+export type PuzzleData = any;
+export type GameData = any;
+export type AnalysisData = any;
+export type BotMatchData = any;
+export type PieceCaptureData = any;
+export type PawnBattleData = any;
+export type LessonData = any;
