@@ -120,39 +120,40 @@ export const StudentDashboard: React.FC = () => {
   const isKids = currentStudent.kidsMode;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      {/* Cartão de Perfil do Aluno */}
       <div
-        className={`rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 ${
+        className={`rounded-3xl p-5 sm:p-8 shadow-sm transition-all duration-300 ${
           isKids
             ? 'bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-indigo-500/15 border-2 border-amber-300/40'
             : 'bg-white border border-slate-200 shadow-sm'
         }`}
       >
-        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+        <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full sm:w-auto">
             <div className="flex flex-col items-center">
               <AvatarBadge student={currentStudent} size="xl" />
-              <div className="flex items-center gap-1.5 mt-2.5">
+              <div className="flex items-center gap-2 mt-3">
                 <button
                   type="button"
                   onClick={() => setShowAvatarModal(true)}
-                  className="flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white/90 hover:bg-white px-2.5 py-1 rounded-full border border-blue-200 shadow-xs transition transform hover:scale-105"
+                  className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-white/90 hover:bg-white px-3 py-1.5 rounded-full border border-blue-200 shadow-xs transition transform active:scale-95"
                 >
-                  <Palette className="w-3 h-3 text-blue-600" />
+                  <Palette className="w-3.5 h-3.5 text-blue-600" />
                   <span>Editar</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowShopModal(true)}
-                  className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200 shadow-xs transition transform hover:scale-105"
+                  className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200 shadow-xs transition transform active:scale-95"
                 >
-                  <ShoppingBag className="w-3 h-3 text-amber-600" />
+                  <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
                   <span>Loja XP</span>
                 </button>
               </div>
             </div>
 
-            <div>
+            <div className="w-full">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                   {currentStudent.name}
@@ -174,39 +175,41 @@ export const StudentDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-amber-200 shadow-xs">
+          {/* Indicadores de Estatísticas */}
+          <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto shrink-0">
+            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-amber-200 shadow-xs flex-1 md:flex-none min-w-[90px]">
               <div className="flex items-center gap-1 text-amber-500 font-extrabold text-lg sm:text-xl">
                 <Flame className="w-5 h-5 fill-amber-400 text-amber-500 animate-bounce" />
                 <span>{currentStudent.streak}</span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">
                 Dias Seguidos
               </span>
             </div>
 
-            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-blue-200 shadow-xs">
+            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-blue-200 shadow-xs flex-1 md:flex-none min-w-[90px]">
               <div className="flex items-center gap-1 text-blue-600 font-extrabold text-lg sm:text-xl">
                 <Shield className="w-5 h-5 text-blue-500" />
                 <span>{currentStudent.streakShields}</span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Escudo Semanal
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+                Escudo
               </span>
             </div>
 
-            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-amber-200 shadow-xs">
+            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-amber-200 shadow-xs flex-1 md:flex-none min-w-[90px]">
               <div className="flex items-center gap-1 text-[#F5C542] font-extrabold text-lg sm:text-xl">
                 <Award className="w-5 h-5 text-amber-500" />
                 <span className="text-slate-900">{currentStudent.xp}</span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">
                 Pontos XP
               </span>
             </div>
           </div>
         </div>
 
+        {/* Barra de Progresso */}
         <div className="mt-6 pt-5 border-t border-slate-200/60">
           <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-2">
             <span>Progresso para o próximo nível</span>
@@ -223,42 +226,43 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Abas e Listagem de Tarefas */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <div className="flex items-center overflow-x-auto pb-2 border-b border-slate-200">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('pending')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap ${
                 activeTab === 'pending'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <Clock className="w-3.5 h-3.5" />
+              <Clock className="w-4 h-4" />
               <span>Pendentes ({pendingAssignments.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab('completed')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap ${
                 activeTab === 'completed'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <CheckCircle2 className="w-4 h-4" />
               <span>Concluídas ({completedAssignments.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab('all')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap ${
                 activeTab === 'all'
                   ? 'bg-slate-800 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5" />
+              <BookOpen className="w-4 h-4" />
               <span>Biblioteca Livre ({contents.length})</span>
             </button>
           </div>
@@ -277,7 +281,7 @@ export const StudentDashboard: React.FC = () => {
                 </p>
                 <button
                   onClick={() => setActiveTab('all')}
-                  className="mt-4 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-700 transition"
+                  className="mt-4 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-sm hover:bg-blue-700 transition"
                 >
                   Ver Biblioteca Livre
                 </button>
@@ -295,7 +299,7 @@ export const StudentDashboard: React.FC = () => {
                   >
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md">
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md">
                           {content.category}
                         </span>
                         <div className="flex items-center gap-1 text-amber-500">
@@ -339,7 +343,7 @@ export const StudentDashboard: React.FC = () => {
         {activeTab === 'completed' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {completedAssignments.length === 0 ? (
-              <div className="col-span-full py-8 text-center text-slate-400 text-xs">
+              <div className="col-span-full py-12 text-center bg-white rounded-3xl border border-dashed border-slate-300 p-8 text-slate-400 text-xs">
                 Nenhuma atividade concluída ainda.
               </div>
             ) : (
@@ -351,7 +355,7 @@ export const StudentDashboard: React.FC = () => {
                   <div
                     key={assignment.id}
                     onClick={() => setActiveTask({ content, assignment })}
-                    className="bg-white/80 rounded-2xl p-5 border border-emerald-200 hover:shadow-sm transition cursor-pointer flex flex-col justify-between"
+                    className="bg-white/90 rounded-2xl p-5 border border-emerald-200 hover:shadow-sm transition cursor-pointer flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -395,7 +399,7 @@ export const StudentDashboard: React.FC = () => {
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-md">
                       {content.type}
                     </span>
                     <span className="text-xs font-bold text-amber-600">
@@ -421,6 +425,7 @@ export const StudentDashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Quadro de Conquistas */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
@@ -429,7 +434,7 @@ export const StudentDashboard: React.FC = () => {
               Quadro de Conquistas
             </h2>
           </div>
-          <span className="text-xs text-slate-500 font-medium">
+          <span className="text-xs text-slate-500 font-medium hidden sm:inline">
             Desbloqueia subindo de nível e resolvendo desafios
           </span>
         </div>
