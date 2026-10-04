@@ -14,6 +14,7 @@ import {
   INITIAL_ACTIVITY_LOGS,
   ACHIEVEMENTS,
 } from '../data/seedData';
+import { supabase } from '../supabaseClient';
 import confetti from 'canvas-confetti';
 import { sounds } from '../utils/audio';
 
@@ -81,32 +82,151 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localStorage.getItem('al_chess_student_id') || 'student-1';
   });
 
-  const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem('al_chess_students');
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
-  });
+  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+  const [contents, setContents] = useState<ContentItem[]>(INITIAL_CONTENT);
+  const [assignments, setAssignments] = useState<TaskAssignment[]>(INITIAL_ASSIGNMENTS);
+  const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>(INITIAL_ACTIVITY_LOGS);
+  const [customCategories, setCustomCategories] = useState<string[]>(DEFAULT_CATEGORIES);
 
-  const [contents, setContents] = useState<ContentItem[]>(() => {
-    const saved = localStorage.getItem('al_chess_content');
-    return saved ? JSON.parse(saved) : INITIAL_CONTENT;
-  });
+  // Carregar dados iniciais do Supabase na primeira execução
+  useEffect(() => {
+    async function loadDataFromSupabase() {
+      try {
+        const { data: dbStudents } = await supabase.from('students').select('*');
+        if (dbStudents && dbStudents.length > 0) {
+          // Mapeia do formato do banco para o formato do App se necessário
+          const formattedStudents: Student[] = dbStudents.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            password: s.password,
+            age: s.age,
+            level: s.level,
+            kidsMode: s.kids_mode,
+            avatar: s.avatar,
+            rating: s.rating,
+            streak: s.streak,
+            maxStreak: s.max_streak,
+            solvedCount: s.solved_count,
+            coins: s.coins,
+            xp: s.xp,
+            levelRank: s.level_rank,
+            rankName: s.rank_name,
+            unlockedAvatars: s.unlocked_avatars,
+            lastActiveDate: s.last_active_date,
+            enrolledSince: s.enrolled_since,
+            notes: s.notes,
+          }));
+          setStudents(formattedStudents);
+        } else {
+          // Se o banco estiver vazio, insere os dados iniciais do seedData
+          for (const s of INITIAL_STUDENTS) {
+            await supabase.from('students').upsert({
+              id: s.id,
+              name: s.name,
+              password: s.password,
+              age: s.age,
+              level: s.level,
+              kids_mode: s.kidsMode,
+              avatar: s.avatar,
+              rating: s.rating,
+              streak: s.streak,
+              max_streak: s.maxStreak,
+              solved_count: s.solvedCount,
+              coins: s.coins,
+              xp: s.xp,
+              level_rank: s.levelRank,
+              rank_name: s.rankName,
+              unlocked_avatars: s.unlockedAvatars,
+              last_active_date: s.lastActiveDate,
+              enrolled_since: s.enrolledSince,
+              notes: s.notes,
+            });
+          }
+        }
 
-  const [customCategories, setCustomCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('al_chess_categories');
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
-  });
+        const { data: dbContents } = await supabase.from('contents').select('*');
+        if (dbContents && dbContents.length > 0) {
+          const formattedContents: ContentItem[] = dbContents.map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            type: c.type,
+            description: c.description,
+            difficulty: c.difficulty,
+            category: c.category,
+            tags: c.tags,
+            xpReward: c.xp_reward,
+            author: c.author,
+            pgn: c.pgn,
+            fen: c.fen,
+            data: c.data,
+            createdAt: c.created_at,
+          }));
+          setContents(formattedContents);
+        } else {
+          for (const c of INITIAL_CONTENT) {
+            await supabase.from('contents').upsert({
+              id: c.id,
+              title: c.title,
+              type: c.type,
+              description: c.description,
+              difficulty: c.difficulty,
+              category: c.category,
+              tags: c.tags,
+              xp_reward: c.xpReward,
+              author: c.author,
+              pgn: c.pgn,
+              fen: c.fen,
+              data: c.data,
+              created_at: c.createdAt,
+            });
+          }
+        }
 
-  const [assignments, setAssignments] = useState<TaskAssignment[]>(() => {
-    const saved = localStorage.getItem('al_chess_assignments');
-    return saved ? JSON.parse(saved) : INITIAL_ASSIGNMENTS;
-  });
+        const { data: dbAssignments } = await supabase.from('assignments').select('*');
+        if (dbAssignments && dbAssignments.length > 0) {
+          const formattedAssignments: TaskAssignment[] = dbAssignments.map((a: any) => ({
+            id: a.id,
+            studentId: a.student_id,
+            contentId: a.content_id,
+            assignedDate: a.assigned_date,
+            assignedAt: a.assigned_at,
+            completed: a.completed,
+            completedAt: a.completed_at,
+            status: a.status,
+            score: a.score,
+            attempts: a.attempts,
+            timeSpentSeconds: a.time_spent_seconds,
+            firstTrySuccess: a.first_try_success,
+            studentComments: a.student_comments,
+          }));
+          setAssignments(formattedAssignments);
+        } else {
+          for (const a of INITIAL_ASSIGNMENTS) {
+            await supabase.from('assignments').upsert({
+              id: a.id,
+              student_id: a.studentId,
+              content_id: a.contentId,
+              assigned_date: a.assignedDate,
+              assigned_at: a.assignedAt,
+              completed: a.completed,
+              completed_at: a.completedAt,
+              status: a.status,
+              score: a.score,
+              attempts: a.attempts,
+              time_spent_seconds: a.timeSpentSeconds,
+              first_try_success: a.firstTrySuccess,
+              student_comments: a.studentComments,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar com o Supabase:', err);
+      }
+    }
 
-  const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>(() => {
-    const saved = localStorage.getItem('al_chess_activity_logs');
-    return saved ? JSON.parse(saved) : INITIAL_ACTIVITY_LOGS;
-  });
+    loadDataFromSupabase();
+  }, []);
 
-  // Save changes to localStorage
   useEffect(() => {
     localStorage.setItem('al_chess_role', role);
   }, [role]);
@@ -114,26 +234,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('al_chess_student_id', currentStudentId);
   }, [currentStudentId]);
-
-  useEffect(() => {
-    localStorage.setItem('al_chess_students', JSON.stringify(students));
-  }, [students]);
-
-  useEffect(() => {
-    localStorage.setItem('al_chess_content', JSON.stringify(contents));
-  }, [contents]);
-
-  useEffect(() => {
-    localStorage.setItem('al_chess_categories', JSON.stringify(customCategories));
-  }, [customCategories]);
-
-  useEffect(() => {
-    localStorage.setItem('al_chess_assignments', JSON.stringify(assignments));
-  }, [assignments]);
-
-  useEffect(() => {
-    localStorage.setItem('al_chess_activity_logs', JSON.stringify(activityLogs));
-  }, [activityLogs]);
 
   const currentStudent = students.find((s) => s.id === currentStudentId) || students[0];
 
@@ -158,18 +258,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const toggleKidsMode = (studentId: string) => {
+  const toggleKidsMode = async (studentId: string) => {
+    const target = students.find((s) => s.id === studentId);
+    if (!target) return;
+    const newKidsMode = !target.kidsMode;
+
     setStudents((prev) =>
-      prev.map((student) => {
-        if (student.id === studentId) {
-          return { ...student, kidsMode: !student.kidsMode };
-        }
-        return student;
-      })
+      prev.map((student) => (student.id === studentId ? { ...student, kidsMode: newKidsMode } : student))
     );
+
+    await supabase.from('students').update({ kids_mode: newKidsMode }).eq('id', studentId);
   };
 
-  const addStudent = (studentData: Omit<Student, 'id' | 'xp' | 'levelRank' | 'rankName' | 'streak' | 'maxStreak' | 'streakShields' | 'lastActiveDate' | 'enrolledSince'>) => {
+  const addStudent = async (studentData: Omit<Student, 'id' | 'xp' | 'levelRank' | 'rankName' | 'streak' | 'maxStreak' | 'streakShields' | 'lastActiveDate' | 'enrolledSince'>) => {
     const newId = `student-${Date.now()}`;
     const newStudent: Student = {
       ...studentData,
@@ -183,37 +284,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lastActiveDate: new Date().toISOString().split('T')[0],
       enrolledSince: new Date().toISOString().split('T')[0],
     };
+
     setStudents((prev) => [...prev, newStudent]);
+
+    await supabase.from('students').insert({
+      id: newStudent.id,
+      name: newStudent.name,
+      password: newStudent.password,
+      age: newStudent.age,
+      level: newStudent.level,
+      kids_mode: newStudent.kidsMode,
+      avatar: newStudent.avatar,
+      rating: newStudent.rating,
+      streak: newStudent.streak,
+      max_streak: newStudent.maxStreak,
+      solved_count: newStudent.solvedCount,
+      coins: newStudent.coins,
+      xp: newStudent.xp,
+      level_rank: newStudent.levelRank,
+      rank_name: newStudent.rankName,
+      unlocked_avatars: newStudent.unlockedAvatars,
+      last_active_date: newStudent.lastActiveDate,
+      enrolled_since: newStudent.enrolledSince,
+      notes: newStudent.notes,
+    });
   };
 
-  const updateStudent = (studentId: string, data: Partial<Student>) => {
+  const updateStudent = async (studentId: string, data: Partial<Student>) => {
     setStudents((prev) =>
       prev.map((s) => (s.id === studentId ? { ...s, ...data } : s))
     );
+
+    const dbData: any = {};
+    if (data.name !== undefined) dbData.name = data.name;
+    if (data.password !== undefined) dbData.password = data.password;
+    if (data.age !== undefined) dbData.age = data.age;
+    if (data.level !== undefined) dbData.level = data.level;
+    if (data.kidsMode !== undefined) dbData.kids_mode = data.kidsMode;
+    if (data.avatar !== undefined) dbData.avatar = data.avatar;
+    if (data.xp !== undefined) dbData.xp = data.xp;
+    if (data.levelRank !== undefined) dbData.level_rank = data.levelRank;
+    if (data.rankName !== undefined) dbData.rank_name = data.rankName;
+    if (data.streak !== undefined) dbData.streak = data.streak;
+    if (data.maxStreak !== undefined) dbData.max_streak = data.maxStreak;
+
+    await supabase.from('students').update(dbData).eq('id', studentId);
   };
 
-  const deleteStudent = (studentId: string) => {
+  const deleteStudent = async (studentId: string) => {
     setStudents((prev) => prev.filter((s) => s.id !== studentId));
     setAssignments((prev) => prev.filter((a) => a.studentId !== studentId));
+
+    await supabase.from('students').delete().eq('id', studentId);
   };
 
-  // Content actions
-  const addContent = (contentData: Omit<ContentItem, 'id' | 'createdAt'>) => {
+  const addContent = async (contentData: Omit<ContentItem, 'id' | 'createdAt'>) => {
     const newContent: ContentItem = {
       ...contentData,
       id: `custom-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
     setContents((prev) => [newContent, ...prev]);
+
+    await supabase.from('contents').insert({
+      id: newContent.id,
+      title: newContent.title,
+      type: newContent.type,
+      description: newContent.description,
+      difficulty: newContent.difficulty,
+      category: newContent.category,
+      tags: newContent.tags,
+      xp_reward: newContent.xpReward,
+      author: newContent.author,
+      pgn: newContent.pgn,
+      fen: newContent.fen,
+      data: newContent.data,
+      created_at: newContent.createdAt,
+    });
   };
 
-  const updateContent = (contentId: string, data: Partial<ContentItem>) => {
+  const updateContent = async (contentId: string, data: Partial<ContentItem>) => {
     setContents((prev) =>
       prev.map((c) => (c.id === contentId ? { ...c, ...data } : c))
     );
+
+    const dbData: any = {};
+    if (data.title !== undefined) dbData.title = data.title;
+    if (data.description !== undefined) dbData.description = data.description;
+    if (data.difficulty !== undefined) dbData.difficulty = data.difficulty;
+    if (data.category !== undefined) dbData.category = data.category;
+    if (data.xpReward !== undefined) dbData.xp_reward = data.xpReward;
+    if (data.data !== undefined) dbData.data = data.data;
+
+    await supabase.from('contents').update(dbData).eq('id', contentId);
   };
 
-  const duplicateContent = (contentId: string) => {
+  const duplicateContent = async (contentId: string) => {
     const original = contents.find((c) => c.id === contentId);
     if (!original) return;
 
@@ -225,11 +391,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setContents((prev) => [duplicated, ...prev]);
     sounds.playMove();
+
+    await supabase.from('contents').insert({
+      id: duplicated.id,
+      title: duplicated.title,
+      type: duplicated.type,
+      description: duplicated.description,
+      difficulty: duplicated.difficulty,
+      category: duplicated.category,
+      tags: duplicated.tags,
+      xp_reward: duplicated.xpReward,
+      author: duplicated.author,
+      pgn: duplicated.pgn,
+      fen: duplicated.fen,
+      data: duplicated.data,
+      created_at: duplicated.createdAt,
+    });
   };
 
-  const deleteContent = (contentId: string) => {
+  const deleteContent = async (contentId: string) => {
     setContents((prev) => prev.filter((c) => c.id !== contentId));
     setAssignments((prev) => prev.filter((a) => a.contentId !== contentId));
+
+    await supabase.from('contents').delete().eq('id', contentId);
   };
 
   const addCustomCategory = (category: string) => {
@@ -238,8 +422,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomCategories((prev) => [...prev, trimmed]);
   };
 
-  // Assign task to student
-  const assignTask = (studentId: string, contentId: string) => {
+  const assignTask = async (studentId: string, contentId: string) => {
     const exists = assignments.some(
       (a) => a.studentId === studentId && a.contentId === contentId && a.status === 'pending'
     );
@@ -255,16 +438,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timeSpentSeconds: 0,
     };
     setAssignments((prev) => [...prev, newAssignment]);
+
+    await supabase.from('assignments').insert({
+      id: newAssignment.id,
+      student_id: newAssignment.studentId,
+      content_id: newAssignment.contentId,
+      status: newAssignment.status,
+      assigned_at: newAssignment.assignedAt,
+      attempts: newAssignment.attempts,
+      time_spent_seconds: newAssignment.timeSpentSeconds,
+    });
   };
 
-  const assignContentToMultipleStudents = (contentId: string, studentIds: string[]) => {
+  const assignContentToMultipleStudents = async (contentId: string, studentIds: string[]) => {
     const newAssignments: TaskAssignment[] = [];
+    const dbInserts: any[] = [];
+
     studentIds.forEach((studentId) => {
       const exists = assignments.some(
         (a) => a.studentId === studentId && a.contentId === contentId && a.status === 'pending'
       );
       if (!exists) {
-        newAssignments.push({
+        const item = {
           id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           studentId,
           contentId,
@@ -272,29 +467,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           assignedAt: new Date().toISOString(),
           attempts: 0,
           timeSpentSeconds: 0,
+        };
+        newAssignments.push(item);
+        dbInserts.push({
+          id: item.id,
+          student_id: item.studentId,
+          content_id: item.contentId,
+          status: item.status,
+          assigned_at: item.assignedAt,
+          attempts: item.attempts,
+          time_spent_seconds: item.timeSpentSeconds,
         });
       }
     });
 
     if (newAssignments.length > 0) {
       setAssignments((prev) => [...prev, ...newAssignments]);
+      await supabase.from('assignments').insert(dbInserts);
     }
   };
 
-  const unassignTask = (assignmentId: string) => {
+  const unassignTask = async (assignmentId: string) => {
     setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+    await supabase.from('assignments').delete().eq('id', assignmentId);
   };
 
-  const copyTasksToStudent = (fromStudentId: string, targetStudentId: string) => {
+  const copyTasksToStudent = async (fromStudentId: string, targetStudentId: string) => {
     const sourceTasks = assignments.filter((a) => a.studentId === fromStudentId);
     const existingTargetContentIds = new Set(
       assignments.filter((a) => a.studentId === targetStudentId).map((a) => a.contentId)
     );
 
     const newAssignments: TaskAssignment[] = [];
+    const dbInserts: any[] = [];
+
     sourceTasks.forEach((task) => {
       if (!existingTargetContentIds.has(task.contentId)) {
-        newAssignments.push({
+        const item = {
           id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           studentId: targetStudentId,
           contentId: task.contentId,
@@ -302,16 +511,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           assignedAt: new Date().toISOString(),
           attempts: 0,
           timeSpentSeconds: 0,
+        };
+        newAssignments.push(item);
+        dbInserts.push({
+          id: item.id,
+          student_id: item.studentId,
+          content_id: item.contentId,
+          status: item.status,
+          assigned_at: item.assignedAt,
+          attempts: item.attempts,
+          time_spent_seconds: item.timeSpentSeconds,
         });
       }
     });
 
     if (newAssignments.length > 0) {
       setAssignments((prev) => [...prev, ...newAssignments]);
+      await supabase.from('assignments').insert(dbInserts);
     }
   };
 
-  const completeTask = (
+  const completeTask = async (
     assignmentId: string,
     timeSpentSeconds: number,
     attempts: number,
@@ -323,84 +543,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const content = contents.find((c) => c.id === assignment.contentId);
     const xpReward = content ? content.xpReward : 50;
 
-    // Update assignment
+    const updatedAssignment = {
+      ...assignment,
+      status: 'completed' as const,
+      completedAt: new Date().toISOString(),
+      timeSpentSeconds: assignment.timeSpentSeconds + timeSpentSeconds,
+      attempts: assignment.attempts + attempts,
+      firstTrySuccess,
+      score: firstTrySuccess ? 100 : Math.max(50, 100 - (attempts - 1) * 20),
+    };
+
     setAssignments((prev) =>
-      prev.map((a) =>
-        a.id === assignmentId
-          ? {
-              ...a,
-              status: 'completed',
-              completedAt: new Date().toISOString(),
-              timeSpentSeconds: a.timeSpentSeconds + timeSpentSeconds,
-              attempts: a.attempts + attempts,
-              firstTrySuccess,
-              score: firstTrySuccess ? 100 : Math.max(50, 100 - (attempts - 1) * 20),
-            }
-          : a
-      )
+      prev.map((a) => (a.id === assignmentId ? updatedAssignment : a))
     );
 
-    // Update student XP, Rank & Streak
-    setStudents((prev) =>
-      prev.map((student) => {
-        if (student.id === assignment.studentId) {
-          const newXp = student.xp + xpReward;
-          const currentRank = [...RANKS].reverse().find((r) => newXp >= r.xpRequired) || RANKS[0];
-
-          const today = new Date().toISOString().split('T')[0];
-          let newStreak = student.streak;
-          if (student.lastActiveDate !== today) {
-            newStreak += 1;
-          }
-
-          if (student.kidsMode) {
-            triggerConfetti();
-          }
-          sounds.playSuccess();
-
-          return {
-            ...student,
-            xp: newXp,
-            levelRank: currentRank.level,
-            rankName: currentRank.name,
-            streak: newStreak,
-            maxStreak: Math.max(newStreak, student.maxStreak),
-            lastActiveDate: today,
-          };
-        }
-        return student;
+    await supabase
+      .from('assignments')
+      .update({
+        status: updatedAssignment.status,
+        completed_at: updatedAssignment.completedAt,
+        time_spent_seconds: updatedAssignment.timeSpentSeconds,
+        attempts: updatedAssignment.attempts,
+        first_try_success: updatedAssignment.firstTrySuccess,
+        score: updatedAssignment.score,
       })
-    );
+      .eq('id', assignmentId);
 
-    // Add activity log
+    // Atualiza o Aluno afetado
+    const student = students.find((s) => s.id === assignment.studentId);
+    if (student) {
+      const newXp = student.xp + xpReward;
+      const currentRank = [...RANKS].reverse().find((r) => newXp >= r.xpRequired) || RANKS[0];
+      const today = new Date().toISOString().split('T')[0];
+      let newStreak = student.streak;
+      if (student.lastActiveDate !== today) {
+        newStreak += 1;
+      }
+
+      if (student.kidsMode) {
+        triggerConfetti();
+      }
+      sounds.playSuccess();
+
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === student.id
+            ? {
+                ...s,
+                xp: newXp,
+                levelRank: currentRank.level,
+                rankName: currentRank.name,
+                streak: newStreak,
+                maxStreak: Math.max(newStreak, s.maxStreak),
+                lastActiveDate: today,
+              }
+            : s
+        )
+      );
+
+      await supabase
+        .from('students')
+        .update({
+          xp: newXp,
+          level_rank: currentRank.level,
+          rank_name: currentRank.name,
+          streak: newStreak,
+          max_streak: Math.max(newStreak, student.maxStreak),
+          last_active_date: today,
+        })
+        .eq('id', student.id);
+    }
+
     const newLog: ActivityLogEntry = {
       id: `log-${Date.now()}`,
       studentId: assignment.studentId,
-      action:
-        content?.type === 'game'
-          ? 'game_analyzed'
-          : content?.type === 'lesson'
-          ? 'lesson_completed'
-          : content?.type === 'analysis'
-          ? 'analysis_submitted'
-          : 'puzzle_solved',
+      action: 'puzzle_solved',
       title: `${content?.title || 'Atividade'} concluída!`,
       xpEarned: xpReward,
       timestamp: new Date().toISOString(),
-      details: firstTrySuccess ? 'Acertou de primeira!' : `Concluído em ${attempts} tentativas (${timeSpentSeconds}s).`,
+      details: firstTrySuccess ? 'Acertou de primeira!' : `Concluído em ${attempts} tentativas.`,
     };
     setActivityLogs((prev) => [newLog, ...prev]);
   };
 
   const resetAllData = () => {
     localStorage.clear();
-    setStudents(INITIAL_STUDENTS);
-    setContents(INITIAL_CONTENT);
-    setAssignments(INITIAL_ASSIGNMENTS);
-    setActivityLogs(INITIAL_ACTIVITY_LOGS);
-    setCustomCategories(DEFAULT_CATEGORIES);
-    setRoleState('teacher');
-    setCurrentStudentIdState('student-1');
+    window.location.reload();
   };
 
   return (
