@@ -1,120 +1,43 @@
-export interface Student {
+export type UserRole = 'student' | 'teacher';
+
+export type ActivityLogEntry = {
+  id: string;
+  action: string;
+  timestamp: string;
+};
+
+export type Student = {
   id: string;
   name: string;
-  password?: string;
-  age: number;
-  level: 'Iniciante' | 'Intermediário' | 'Avançado';
-  kidsMode: boolean;
-  xp: number;
+  avatar: string;
+  rating: number;
   streak: number;
-  streakShields: number;
-  levelRank: number;
-  rankName: string;
-  avatar: {
-    base: string;
-    color: string;
-    hat?: string;
-    hair?: string;
-    outfit?: string;
-    accessory?: string;
-  };
-  inventory?: string[];
-  notes?: string;
-}
+  maxStreak?: number;
+  solvedCount: number;
+  lastActiveDate?: string;
+  coins: number;
+  unlockedAvatars: string[];
+};
 
-export type ContentType = 'puzzle' | 'game' | 'lesson' | 'analysis' | 'bot_match' | 'piece_capture' | 'pawn_battle';
-
-export interface ContentItem {
+export type ContentItem = {
   id: string;
-  type: ContentType;
   title: string;
+  type: 'tactics' | 'bot' | 'piece-capture' | 'pawn-battle' | 'didactic' | 'analysis';
   description: string;
-  category: string;
-  difficulty: 1 | 2 | 3 | 4 | 5;
-  xpReward: number;
-  author: string;
-  tags: string[];
-  data: any;
-}
+  difficulty: 'Iniciante' | 'Intermédio' | 'Avançado';
+  pgn?: string;
+  fen?: string;
+  createdAt?: string;
+};
 
-export interface TaskAssignment {
+export type TaskAssignment = {
   id: string;
   studentId: string;
   contentId: string;
-  status: 'pending' | 'completed';
-  assignedDate: string;
-  completedDate?: string;
-  timeSpentSeconds?: number;
+  assignedDate?: string;
+  assignedAt?: string;
+  completed: boolean;
+  score?: number;
   attempts?: number;
-  firstTrySuccess?: boolean;
-  studentComments?: Record<number, string>;
-}
-
-export interface PuzzleData {
-  fen: string;
-  solutionMoves: string[];
-  turn: 'w' | 'b';
-  hint?: string;
-  explanation?: string;
-}
-
-export interface GameMoveData {
-  san: string;
-  comment?: string;
-  teacherPrompt?: string; // Pergunta que o professor deixa para o aluno neste lance específico
-  requiresStudentReflection?: boolean; // Se true, indica que o aluno deve refletir e responder neste ponto
-}
-
-export interface GameData {
-  white: string;
-  black: string;
-  event: string;
-  date: string;
-  result: string;
-  initialFen?: string;
-  moves: GameMoveData[];
-}
-
-export interface LessonSection {
-  title: string;
-  text: string;
-  fen?: string;
-  highlightSquares?: string[];
-  arrows?: [string, string][];
-}
-
-export interface LessonData {
-  sections: LessonSection[];
-}
-
-export interface AnalysisData {
-  white: string;
-  black: string;
-  date: string;
-  initialFen?: string;
-  guidanceText?: string;
-  moves: GameMoveData[];
-}
-
-export interface BotMatchData {
-  initialFen?: string;
-  botLevel: number;
-  objective: string;
-}
-
-export interface PieceCaptureData {
-  initialFen?: string;
-  targetPieces: string[];
-}
-
-export interface PawnBattleData {
-  initialFen?: string;
-  winningCondition: string;
-}
-
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-}
+  timeSpentSeconds?: number;
+};
