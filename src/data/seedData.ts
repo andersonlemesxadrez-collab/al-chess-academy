@@ -2,8 +2,34 @@ import { Student, ContentItem, TaskAssignment, ActivityLogEntry, Achievement } f
 
 export const INITIAL_STUDENTS: Student[] = [
   {
+    id: 'student-geaninne',
+    name: 'Geaninne',
+    password: 'Linda',
+    age: 21,
+    level: 'Avançado',
+    kidsMode: true,
+    avatar: {
+      base: 'queen',
+      color: '#8B5CF6',
+      hat: 'crown',
+    },
+    rating: 1200,
+    streak: 1,
+    maxStreak: 1,
+    solvedCount: 0,
+    coins: 100,
+    xp: 0,
+    levelRank: 1,
+    rankName: 'Peão Curioso',
+    unlockedAvatars: ['pawn', 'knight', 'queen'],
+    lastActiveDate: new Date().toISOString().split('T')[0],
+    enrolledSince: '2026-04-01',
+    notes: 'Aluna dedicada, focada em xadrez avançado.',
+  },
+  {
     id: 'student-1',
     name: 'Sofia Lemes',
+    password: '123',
     age: 7,
     level: 'Iniciante',
     kidsMode: true, // Modo Infantil Ativado (Avatar, confetti, linguagem divertida)
@@ -25,6 +51,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-2',
     name: 'Pedro Henrique',
+    password: '456',
     age: 9,
     level: 'Iniciante',
     kidsMode: true, // Modo Infantil Ativado
@@ -46,6 +73,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-3',
     name: 'Lucas Barreto',
+    password: '789',
     age: 12,
     level: 'Intermediário',
     kidsMode: false, // Modo Profissional (Focado em dados e estatísticas)
@@ -66,6 +94,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-4',
     name: 'Mariana Duarte',
+    password: '321',
     age: 15,
     level: 'Avançado',
     kidsMode: false, // Modo Profissional
@@ -98,15 +127,6 @@ export const INITIAL_CONTENT: ContentItem[] = [
     createdAt: '2026-03-01',
     data: {
       fen: 'r1b1k2r/pppp1ppp/8/4q3/1bP5/2N1P3/PP3PPP/R1BQKB1R w KQkq - 0 9',
-      // Nc7+ forks Ke8 and Ra8, or Nd5
-      // Let's use a clear, famous fork position:
-      // White: Ke1, Qd1, Nc3, a2, b2, c2. Black: Ke8, Qd8, a7, b7, c7
-      // Position: White to play and win Queen:
-      // 4k3/4q3/8/8/3N4/8/8/4K3 w - - 0 1 (White knight on d4 can check if king moves or fork)
-      // Let's use a standard puzzle:
-      // FEN: r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 5
-      // Or a clean Mate in 1:
-      // FEN: 6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1 -> Re8#
       solutionMoves: ['Re8#'],
       turn: 'w',
       hint: 'A primeira fileira das pretas está desprotegida!',
@@ -124,9 +144,8 @@ export const INITIAL_CONTENT: ContentItem[] = [
     author: 'Prof. Anderson Lemes',
     createdAt: '2026-03-05',
     data: {
-      // White to move: Nc7+ forks Ke8 and Ra8
       fen: 'r3k2r/pppb1ppp/8/8/3N4/8/PPP2PPP/R1B1K2R w KQkq - 0 12',
-      solutionMoves: ['Nc6'], // or clean fork
+      solutionMoves: ['Nc6'],
       turn: 'w',
       hint: 'Procure uma casa onde seu cavalo ataca duas peças ao mesmo tempo.',
       explanation: 'O salto do cavalo cria uma ameaça dupla impossível de defender!',
@@ -143,9 +162,6 @@ export const INITIAL_CONTENT: ContentItem[] = [
     author: 'Prof. Anderson Lemes',
     createdAt: '2026-03-10',
     data: {
-      // Anastasia mate puzzle:
-      // White: Rh1, Ne7. Black: Kh8, pawn g7.
-      // 1. Rxh7+ Kxh7 2. Rh1#
       fen: '5r1k/pp2Nppp/8/8/8/8/PP3PPP/5R1K w - - 0 1',
       solutionMoves: ['Rf3', 'g6', 'Rh3#'],
       turn: 'w',
@@ -258,7 +274,6 @@ export const INITIAL_CONTENT: ContentItem[] = [
 ];
 
 export const INITIAL_ASSIGNMENTS: TaskAssignment[] = [
-  // Sofia's assignments
   {
     id: 'task-1',
     studentId: 'student-1',
@@ -292,7 +307,6 @@ export const INITIAL_ASSIGNMENTS: TaskAssignment[] = [
     attempts: 0,
     timeSpentSeconds: 0,
   },
-  // Pedro's assignments
   {
     id: 'task-4',
     studentId: 'student-2',
@@ -326,7 +340,6 @@ export const INITIAL_ASSIGNMENTS: TaskAssignment[] = [
     attempts: 0,
     timeSpentSeconds: 0,
   },
-  // Lucas's assignments
   {
     id: 'task-7',
     studentId: 'student-3',
@@ -351,7 +364,6 @@ export const INITIAL_ASSIGNMENTS: TaskAssignment[] = [
     timeSpentSeconds: 610,
     score: 100,
   },
-  // Mariana's assignments
   {
     id: 'task-9',
     studentId: 'student-4',
