@@ -1,13 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Valores configurados diretamente para garantir estabilidade no Vercel
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wenrstlmfjzijaxevzrr.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_GQ0w4XhwSe37XeLqr1Zrwg_NN0bKQKK';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('As variáveis de ambiente do Supabase não foram encontradas.');
-}
-
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
