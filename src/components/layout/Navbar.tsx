@@ -83,24 +83,31 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          {/* Student Selector */}
-          <div className="relative">
-            <div className="flex items-center gap-2 bg-[#24355A] hover:bg-[#2C3F6B] text-white px-3 py-1.5 rounded-xl border border-blue-800/80 text-xs font-medium cursor-pointer transition">
-              <Users className="w-3.5 h-3.5 text-blue-400" />
-              <select
-                value={currentStudentId}
-                onChange={(e) => setCurrentStudentId(e.target.value)}
-                className="bg-transparent text-white text-xs font-medium outline-none cursor-pointer pr-2 appearance-none"
-              >
-                {students.map((st) => (
-                  <option key={st.id} value={st.id} className="bg-[#1B2A4A] text-white">
-                    {st.name} ({st.age} anos • {st.kidsMode ? 'Lúdico' : 'Analítico'})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3 h-3 text-blue-400 pointer-events-none -ml-1" />
+          {/* Student Selector / Restricted view */}
+          {role === 'teacher' ? (
+            <div className="relative">
+              <div className="flex items-center gap-2 bg-[#24355A] hover:bg-[#2C3F6B] text-white px-3 py-1.5 rounded-xl border border-blue-800/80 text-xs font-medium cursor-pointer transition">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                <select
+                  value={currentStudentId}
+                  onChange={(e) => setCurrentStudentId(e.target.value)}
+                  className="bg-transparent text-white text-xs font-medium outline-none cursor-pointer pr-2 appearance-none"
+                >
+                  {students.map((st) => (
+                    <option key={st.id} value={st.id} className="bg-[#1B2A4A] text-white">
+                      {st.name} ({st.age} anos • {st.kidsMode ? 'Lúdico' : 'Analítico'})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 text-blue-400 pointer-events-none -ml-1" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-[#24355A] text-white px-3 py-1.5 rounded-xl border border-blue-800/80 text-xs font-medium">
+              <Users className="w-3.5 h-3.5 text-amber-400" />
+              <span>{currentStudent?.name || 'Estudante'}</span>
+            </div>
+          )}
         </div>
 
         {/* Right side widgets */}
