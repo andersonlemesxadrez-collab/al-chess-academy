@@ -23,6 +23,8 @@ import {
   ExternalLink,
   BookOpen,
   Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 export const TeacherDashboard: React.FC = () => {
@@ -34,6 +36,8 @@ export const TeacherDashboard: React.FC = () => {
     setRole,
     setCurrentStudentId,
     addStudent,
+    updateStudent,
+    deleteStudent,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'students' | 'library'>('students');
@@ -52,6 +56,14 @@ export const TeacherDashboard: React.FC = () => {
   const [newStudentAge, setNewStudentAge] = useState(8);
   const [newStudentLevel, setNewStudentLevel] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Iniciante');
   const [newStudentKidsMode, setNewStudentKidsMode] = useState(true);
+
+  // Edit student form state
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editStudentName, setEditStudentName] = useState('');
+  const [editStudentPassword, setEditStudentPassword] = useState('');
+  const [editStudentAge, setEditStudentAge] = useState(8);
+  const [editStudentLevel, setEditStudentLevel] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Iniciante');
+  const [editStudentKidsMode, setEditStudentKidsMode] = useState(true);
 
   const completedTasks = assignments.filter((a) => a.status === 'completed').length;
   const pendingTasks = assignments.filter((a) => a.status === 'pending').length;
@@ -76,6 +88,36 @@ export const TeacherDashboard: React.FC = () => {
     setNewStudentName('');
     setNewStudentPassword('');
     setShowAddStudentModal(false);
+  };
+
+  const handleOpenEditStudent = (student: Student) => {
+    setEditingStudent(student);
+    setEditStudentName(student.name);
+    setEditStudentPassword(student.password || '');
+    setEditStudentAge(student.age || 8);
+    setEditStudentLevel((student.level as any) || 'Iniciante');
+    setEditStudentKidsMode(!!student.kidsMode);
+  };
+
+  const handleEditStudentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent || !editStudentName) return;
+
+    updateStudent(editingStudent.id, {
+      name: editStudentName,
+      password: editStudentPassword,
+      age: Number(editStudentAge),
+      level: editStudentLevel,
+      kidsMode: editStudentKidsMode,
+    });
+
+    setEditingStudent(null);
+  };
+
+  const handleDeleteStudent = (id: string, name: string) => {
+    if (window.confirm(`Tem a certeza que deseja excluir o aluno ${name}? Todo o histórico será apagado e esta ação não pode ser desfeita.`)) {
+      deleteStudent(id);
+    }
   };
 
   const handleViewAsStudent = (studentId: string) => {
@@ -274,14 +316,25 @@ export const TeacherDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-0.5 text-xs font-bold text-amber-500 bg-amber-50 border border-amber-200/70 px-2 py-0.5 rounded-full">
-                          <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                          <span>{student.streak}d</span>
+                      {/* Botões de Ação Direita: Editar, Excluir, XP e Fogo */}
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleOpenEditStudent(student)} title="Editar Perfil" className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteStudent(student.id, student.name)} title="Excluir Aluno" className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                        <div className="flex items-center gap-0.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200/70 px-2 py-0.5 rounded-full">
-                          <Award className="w-3.5 h-3.5 text-blue-500" />
-                          <span>{student.xp}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-0.5 text-xs font-bold text-amber-500 bg-amber-50 border border-amber-200/70 px-2 py-0.5 rounded-full">
+                            <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                            <span>{student.streak}d</span>
+                          </div>
+                          <div className="flex items-center gap-0.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200/70 px-2 py-0.5 rounded-full">
+                            <Award className="w-3.5 h-3.5 text-blue-500" />
+                            <span>{student.xp}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -337,7 +390,7 @@ export const TeacherDashboard: React.FC = () => {
 
       {/* Add Student Modal */}
       {showAddStudentModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Cadastrar Novo Aluno</h2>
             <form onSubmit={handleAddStudentSubmit} className="space-y-4">
@@ -377,6 +430,57 @@ export const TeacherDashboard: React.FC = () => {
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
                 <button type="button" onClick={() => setShowAddStudentModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition">Cancelar</button>
                 <button type="submit" className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition">Cadastrar Aluno</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Edit className="w-5 h-5 text-blue-600" />
+              Editar Perfil do Aluno
+            </h2>
+            <form onSubmit={handleEditStudentSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Aluno *</label>
+                <input type="text" required value={editStudentName} onChange={(e) => setEditStudentName(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:border-blue-500" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Senha de Acesso</label>
+                <input type="text" value={editStudentPassword} onChange={(e) => setEditStudentPassword(e.target.value)} placeholder="Deixe em branco para remover a senha" className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none focus:border-blue-500" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Idade</label>
+                  <input type="number" min={4} max={99} value={editStudentAge} onChange={(e) => setEditStudentAge(Number(e.target.value))} className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nível</label>
+                  <select value={editStudentLevel} onChange={(e) => setEditStudentLevel(e.target.value as any)} className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm outline-none">
+                    <option value="Iniciante">Iniciante</option>
+                    <option value="Intermediário">Intermediário</option>
+                    <option value="Avançado">Avançado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block">Ativar Modo Gamificado</span>
+                  <span className="text-[11px] text-slate-500">Avatar, sons e loja de itens</span>
+                </div>
+                <input type="checkbox" checked={editStudentKidsMode} onChange={(e) => setEditStudentKidsMode(e.target.checked)} className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition">Cancelar</button>
+                <button type="submit" className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition">Salvar Alterações</button>
               </div>
             </form>
           </div>
