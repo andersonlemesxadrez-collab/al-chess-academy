@@ -3,36 +3,55 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/layout/Navbar';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
 import { StudentDashboard } from './components/student/StudentDashboard';
-import { LoginScreen } from './components/auth/LoginScreen';
 
 const MainContent: React.FC = () => {
-  // Adicionamos setRole para permitir que alunos voltem à tela deles
-  const { role, currentStudentId, setRole } = useApp();
+  // Puxamos os dados necessários do contexto global da aplicação
+  const { role, setRole, currentStudentId, setCurrentStudentId, students } = useApp();
   
-  // Estado para controlar a autenticação do professor
+  // Estados para o nosso novo Ecrã Unificado de Login
   const [isTeacherLogged, setIsTeacherLogged] = useState(false);
-  const [teacherPassword, setTeacherPassword] = useState('');
+  const [loginName, setLoginName] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
-  // DEFINA AQUI A SUA SENHA DE PROFESSOR
-  const MASTER_PASSWORD = 'xadrezproal';
-
-  const handleTeacherLogin = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (teacherPassword === MASTER_PASSWORD) {
+    setLoginError(''); // Limpa erros anteriores
+
+    const nameInput = loginName.trim();
+
+    // 1. VERIFICAÇÃO DO PROFESSOR
+    if (nameInput === 'Anderson' && loginPassword === '1981') {
+      if (setRole) setRole('teacher');
       setIsTeacherLogged(true);
-    } else {
-      alert('Senha incorreta. Acesso negado.');
-      setTeacherPassword('');
+      return;
     }
+
+    // 2. VERIFICAÇÃO DE ALUNOS
+    if (students && students.length > 0) {
+      // Procura um aluno com o nome e senha digitados (ignorando maiúsculas/minúsculas no nome)
+      const foundStudent = students.find(
+        (s: any) => s.name.toLowerCase() === nameInput.toLowerCase() && s.password === loginPassword
+      );
+
+      if (foundStudent) {
+        if (setRole) setRole('student');
+        if (setCurrentStudentId) setCurrentStudentId(foundStudent.id);
+        setIsTeacherLogged(false); // Garante que o modo professor é desativado
+        return;
+      }
+    }
+
+    // 3. FALHA NO LOGIN
+    setLoginError('Nome ou senha incorretos.');
   };
 
-  // 1. Barreira do Aluno: Se for aluno e não estiver logado
-  if (role === 'student' && !currentStudentId) {
-    return <LoginScreen />;
-  }
+  // Verifica se alguém conseguiu passar pelas barreiras de segurança
+  const isStudentLogged = role === 'student' && currentStudentId;
+  const isTeacherActuallyLogged = role === 'teacher' && isTeacherLogged;
 
-  // 2. Barreira do Professor: Se for professor e não tiver inserido a senha
-  if (role === 'teacher' && !isTeacherLogged) {
+  // Se NINGUÉM estiver logado, mostra o Ecrã de Login Unificado
+  if (!isStudentLogged && !isTeacherActuallyLogged) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 selection:bg-blue-500 selection:text-white">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
@@ -44,45 +63,49 @@ const MainContent: React.FC = () => {
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">Acesso Restrito</h2>
-          <p className="text-center text-slate-500 mb-8">Insira a senha do Professor</p>
+          <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">AL Chess Academy</h2>
+          <p className="text-center text-slate-500 mb-8">Insira o seu Nome e Senha para entrar</p>
           
-          <form onSubmit={handleTeacherLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <input
-                type="password"
-                value={teacherPassword}
-                onChange={(e) => setTeacherPassword(e.target.value)}
-                placeholder="Sua senha secreta..."
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                type="text"
+                value={loginName}
+                onChange={(e) => setLoginName(e.target.value)}
+                placeholder="Nome..."
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
                 autoFocus
               />
             </div>
+            <div>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="Senha..."
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
+              />
+            </div>
+            
+            {loginError && (
+              <div className="bg-red-50 text-red-600 text-sm text-center font-semibold py-2 px-4 rounded-lg border border-red-100">
+                {loginError}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors shadow-md"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md mt-4"
             >
-              Entrar no Painel
+              Entrar
             </button>
           </form>
-
-          {/* Botão de fuga para alunos que caiam aqui por engano */}
-          <div className="mt-8 text-center">
-            <button 
-              onClick={() => {
-                if (setRole) setRole('student');
-              }} 
-              className="text-sm font-medium text-slate-400 hover:text-blue-600 transition-colors"
-            >
-              És um aluno? Clica aqui para o teu Login
-            </button>
-          </div>
         </div>
       </div>
     );
   }
 
-  // 3. Aplicação Principal (Só chega aqui se passou pelas barreiras)
+  // Aplicação Principal (Só chega aqui se o login for bem sucedido)
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-blue-500 selection:text-white">
       <div>
@@ -92,17 +115,14 @@ const MainContent: React.FC = () => {
         </main>
       </div>
 
-      {/* Brand Footer */}
+      {/* Rodapé Padrão */}
       <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-slate-800">
-              AL Chess Academy
-            </span>
+            <span className="font-extrabold text-slate-800">AL Chess Academy</span>
             <span>•</span>
             <span>Metodologia Prof. Anderson Lemes</span>
           </div>
-
           <div className="text-slate-400">
             Plataforma interativa para ensino personalizado de xadrez
           </div>
