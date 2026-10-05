@@ -3,12 +3,11 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/layout/Navbar';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
 import { StudentDashboard } from './components/student/StudentDashboard';
+import { GraduationCap, Lock, User, ShieldAlert } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  // Puxamos os dados necessários do contexto global da aplicação
   const { role, setRole, currentStudentId, setCurrentStudentId, students } = useApp();
   
-  // Estados para o nosso novo Ecrã Unificado de Login
   const [isTeacherLogged, setIsTeacherLogged] = useState(false);
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -16,7 +15,7 @@ const MainContent: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginError(''); // Limpa erros anteriores
+    setLoginError('');
 
     const nameInput = loginName.trim();
 
@@ -29,7 +28,6 @@ const MainContent: React.FC = () => {
 
     // 2. VERIFICAÇÃO DE ALUNOS
     if (students && students.length > 0) {
-      // Procura um aluno com o nome e senha digitados (ignorando maiúsculas/minúsculas no nome)
       const foundStudent = students.find(
         (s: any) => s.name.toLowerCase() === nameInput.toLowerCase() && s.password === loginPassword
       );
@@ -37,67 +35,84 @@ const MainContent: React.FC = () => {
       if (foundStudent) {
         if (setRole) setRole('student');
         if (setCurrentStudentId) setCurrentStudentId(foundStudent.id);
-        setIsTeacherLogged(false); // Garante que o modo professor é desativado
+        setIsTeacherLogged(false);
         return;
       }
     }
 
     // 3. FALHA NO LOGIN
-    setLoginError('Nome ou senha incorretos.');
+    setLoginError('Nome ou senha incorretos. Verifique os dados inseridos.');
   };
 
-  // Verifica se alguém conseguiu passar pelas barreiras de segurança
   const isStudentLogged = role === 'student' && currentStudentId;
   const isTeacherActuallyLogged = role === 'teacher' && isTeacherLogged;
 
-  // Se NINGUÉM estiver logado, mostra o Ecrã de Login Unificado
+  // Ecrã de Login Unificado (Otimizado para mobile e desktop)
   if (!isStudentLogged && !isTeacherActuallyLogged) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 selection:bg-blue-500 selection:text-white">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-950 flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-blue-500 selection:text-white">
+        <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100 transform transition-all">
           <div className="flex justify-center mb-6">
-            <div className="bg-blue-600 text-white p-3 rounded-xl shadow-md">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-              </svg>
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg text-white">
+              <GraduationCap className="w-8 h-8" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">AL Chess Academy</h2>
-          <p className="text-center text-slate-500 mb-8">Insira o seu Nome e Senha para entrar</p>
+          
+          <h1 className="text-2xl font-black text-center text-slate-900 tracking-tight">
+            AL Chess <span className="text-blue-600">Academy</span>
+          </h1>
+          <p className="text-center text-xs text-slate-500 mt-1 mb-8">
+            Insira o seu Nome e Senha para entrar na plataforma
+          </p>
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <input
-                type="text"
-                value={loginName}
-                onChange={(e) => setLoginName(e.target.value)}
-                placeholder="Nome..."
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                autoFocus
-              />
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Nome de Acesso
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  required
+                  value={loginName}
+                  onChange={(e) => setLoginName(e.target.value)}
+                  placeholder="Ex: Gabriel Silva ou Anderson"
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-300 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition"
+                  autoFocus
+                />
+              </div>
             </div>
+
             <div>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Senha..."
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-              />
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Senha Secreta
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Sua senha..."
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-300 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition"
+                />
+              </div>
             </div>
             
             {loginError && (
-              <div className="bg-red-50 text-red-600 text-sm text-center font-semibold py-2 px-4 rounded-lg border border-red-100">
-                {loginError}
+              <div className="bg-rose-50 text-rose-700 text-xs text-center font-bold py-3 px-4 rounded-xl border border-rose-200 flex items-center justify-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{loginError}</span>
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md mt-4"
+              className="w-full bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-sm py-3.5 px-4 rounded-2xl transition-all shadow-lg shadow-blue-600/30 mt-2"
             >
-              Entrar
+              Entrar na Conta
             </button>
           </form>
         </div>
@@ -105,19 +120,19 @@ const MainContent: React.FC = () => {
     );
   }
 
-  // Aplicação Principal (Só chega aqui se o login for bem sucedido)
+  // Aplicação Principal Responsiva
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-blue-500 selection:text-white">
       <div>
         <Navbar />
-        <main className="pb-16">
+        <main className="pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           {role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />}
         </main>
       </div>
 
-      {/* Rodapé Padrão */}
+      {/* Rodapé Padrão Adaptável */}
       <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="font-extrabold text-slate-800">AL Chess Academy</span>
             <span>•</span>

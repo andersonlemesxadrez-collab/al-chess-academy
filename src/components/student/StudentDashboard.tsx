@@ -9,8 +9,7 @@ import { PuzzleSolver } from './PuzzleSolver';
 import { GameViewer } from './GameViewer';
 import { LessonViewer } from './LessonViewer';
 import { GameAnalysisViewer } from './GameAnalysisViewer';
-import { AvatarCustomizerModal } from './AvatarCustomizerModal';
-import { AvatarShopModal } from './AvatarShopModal';
+import { VectorShopModal } from './VectorShopModal'; // <--- Importação do novo modal vetorial
 import {
   Flame,
   Award,
@@ -33,8 +32,7 @@ export const StudentDashboard: React.FC = () => {
   } | null>(null);
 
   const [activeTab, setActiveTab] = useState<'pending' | 'completed' | 'all'>('pending');
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [showShopModal, setShowShopModal] = useState(false);
+  const [showVectorShop, setShowVectorShop] = useState(false); // <--- Estado unificado para o estúdio/loja vetorial
 
   if (!currentStudent) {
     return <div className="p-8 text-center text-slate-500 font-medium">Nenhum aluno selecionado.</div>;
@@ -77,15 +75,15 @@ export const StudentDashboard: React.FC = () => {
               <div className="flex items-center gap-2 mt-3">
                 <button
                   type="button"
-                  onClick={() => setShowAvatarModal(true)}
+                  onClick={() => setShowVectorShop(true)}
                   className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-white/90 hover:bg-white px-3 py-1.5 rounded-full border border-blue-200 shadow-xs transition transform active:scale-95"
                 >
                   <Palette className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Editar</span>
+                  <span>Personalizar Avatar</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowShopModal(true)}
+                  onClick={() => setShowVectorShop(true)}
                   className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200 shadow-xs transition transform active:scale-95"
                 >
                   <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
@@ -404,13 +402,9 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Modais */}
-      {showAvatarModal && (
-        <AvatarCustomizerModal onClose={() => setShowAvatarModal(false)} />
-      )}
-
-      {showShopModal && (
-        <AvatarShopModal onClose={() => setShowShopModal(false)} />
+      {/* Modal da Loja / Estúdio Vetorial */}
+      {showVectorShop && (
+        <VectorShopModal onClose={() => setShowVectorShop(false)} />
       )}
     </div>
   );

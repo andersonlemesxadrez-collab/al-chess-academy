@@ -41,12 +41,10 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
   const [startTime] = useState<number>(Date.now());
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   
-  // NOVO: Estado para armazenar o histórico de lances errados na posição atual
   const [wrongMoves, setWrongMoves] = useState<string[]>([]);
 
   const isKidsMode = currentStudent?.kidsMode ?? true;
 
-  // Reset when puzzle changes
   useEffect(() => {
     setCurrentFen(puzzle.fen);
     setMoveIndex(0);
@@ -55,7 +53,7 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
     setShowHint(false);
     setAttempts(1);
     setLastMove(null);
-    setWrongMoves([]); // Limpa o histórico de erros ao mudar de puzzle
+    setWrongMoves([]); 
   }, [content]);
 
   const handleMove = (move: { from: Square; to: Square; promotion?: string; san: string }) => {
@@ -63,19 +61,16 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
 
     const expectedSan = puzzle.solutionMoves[moveIndex];
 
-    // Check if the move made matches expected SAN
     if (move.san === expectedSan) {
       const nextIndex = moveIndex + 1;
       setLastMove({ from: move.from, to: move.to });
-      setWrongMoves([]); // Limpa os erros anteriores ao acertar o lance
+      setWrongMoves([]); 
 
-      // Check if puzzle is fully solved
       if (nextIndex >= puzzle.solutionMoves.length) {
         setStatus('solved');
-        setFeedbackMessage('Sensacional! Você resolveu o problema com precisão!');
+        setFeedbackMessage('Sensacional! Você resolveu com precisão!');
         sounds.playSuccess();
 
-        // Calculate time spent
         const timeSpent = Math.max(5, Math.round((Date.now() - startTime) / 1000));
         const firstTry = attempts === 1;
 
@@ -85,16 +80,13 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
         return true;
       }
 
-      // If there is an opponent reply move in solutionMoves
       const opponentSan = puzzle.solutionMoves[nextIndex];
       setFeedbackMessage('Ótimo lance! O oponente está respondendo...');
 
       setTimeout(() => {
         try {
           const tempGame = new Chess(currentFen);
-          // Play user move first
           tempGame.move(move.san);
-          // Play opponent move
           const opponentMoveObj = tempGame.move(opponentSan);
 
           if (opponentMoveObj) {
@@ -115,11 +107,10 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
 
       return true;
     } else {
-      // Wrong move
       setStatus('wrong');
       setAttempts((prev) => prev + 1);
       setFeedbackMessage('Ops! Esse não é o melhor lance. Tente novamente!');
-      setWrongMoves((prev) => [...prev, move.san]); // Adiciona o lance errado ao histórico
+      setWrongMoves((prev) => [...prev, move.san]); 
       sounds.playError();
       return false;
     }
@@ -131,31 +122,31 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
     setStatus('playing');
     setFeedbackMessage('Posição reiniciada. Vamos lá!');
     setLastMove(null);
-    setWrongMoves([]); // Limpa os erros ao reiniciar
+    setWrongMoves([]); 
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
       {/* Top Breadcrumb & Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 sm:mb-6">
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600 hover:text-blue-600 active:scale-95 transition"
           >
             ← Voltar para minhas atividades
           </button>
         )}
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full shadow-sm">
             {content.category}
           </span>
           <div className="flex items-center text-amber-500">
             {Array.from({ length: 5 }).map((_, i) => (
               <Star
                 key={i}
-                className={`w-3.5 h-3.5 ${
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                   i < content.difficulty ? 'fill-amber-400 text-amber-400' : 'text-slate-300'
                 }`}
               />
@@ -164,36 +155,36 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* Left: Interactive Chess Board */}
-        <div className="lg:col-span-7 flex flex-col items-center">
+        <div className="lg:col-span-7 flex flex-col items-center w-full">
           <ChessBoard
             fen={currentFen}
             orientation={puzzle.turn === 'w' ? 'white' : 'black'}
             onMove={handleMove}
             interactive={status !== 'solved'}
             lastMove={lastMove}
-            wrongMovesHistory={wrongMoves} // NOVO: Passagem do histórico para o tabuleiro
+            wrongMovesHistory={wrongMoves}
           />
 
-          <div className="mt-4 flex items-center justify-between w-full max-w-[520px] text-xs font-medium text-slate-500 px-2">
+          <div className="mt-4 flex flex-wrap items-center justify-between w-full max-w-[520px] text-xs sm:text-sm font-medium text-slate-500 px-2 gap-3">
             <span>
               Jogam as <strong className="text-slate-800">{puzzle.turn === 'w' ? 'Brancas' : 'Pretas'}</strong>
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <button
                 onClick={handleReset}
-                className="flex items-center gap-1 text-slate-600 hover:text-blue-600 font-semibold transition"
+                className="flex items-center gap-1.5 text-slate-600 hover:text-blue-600 font-bold active:scale-95 transition"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="w-4 h-4" />
                 Reiniciar
               </button>
               {puzzle.hint && (
                 <button
                   onClick={() => setShowHint(!showHint)}
-                  className="flex items-center gap-1 text-amber-600 hover:text-amber-700 font-semibold transition"
+                  className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 font-bold active:scale-95 transition"
                 >
-                  <Lightbulb className="w-3.5 h-3.5" />
+                  <Lightbulb className="w-4 h-4" />
                   {showHint ? 'Ocultar Dica' : 'Pedir Dica'}
                 </button>
               )}
@@ -202,42 +193,42 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
         </div>
 
         {/* Right: Feedback & Educational Panel */}
-        <div className="lg:col-span-5 flex flex-col space-y-4">
+        <div className="lg:col-span-5 flex flex-col space-y-4 w-full">
           {/* Main Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
                   {content.title}
                 </h1>
-                <p className="text-xs text-blue-600 font-medium mt-0.5">
+                <p className="text-xs font-bold text-blue-600 mt-1">
                   Por {content.author}
                 </p>
               </div>
-              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 font-black text-xs px-2.5 py-1 rounded-xl shadow-xs">
+              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 font-black text-xs px-2.5 py-1.5 rounded-xl shadow-xs shrink-0">
                 <Award className="w-4 h-4 text-amber-500" />
                 <span>+{content.xpReward} XP</span>
               </div>
             </div>
 
-            <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+            <p className="mt-4 text-sm text-slate-600 leading-relaxed font-medium">
               {content.description}
             </p>
 
             {/* Hint Box */}
             {showHint && puzzle.hint && (
-              <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5 animate-fadeIn">
-                <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs sm:text-sm flex items-start gap-3 animate-fadeIn shadow-inner">
+                <Lightbulb className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="font-bold">Dica do Professor:</strong>
-                  <p className="mt-0.5">{puzzle.hint}</p>
+                  <strong className="font-black">Dica do Professor:</strong>
+                  <p className="mt-1 font-medium">{puzzle.hint}</p>
                 </div>
               </div>
             )}
 
             {/* Live Status Box */}
             <div
-              className={`mt-5 p-4 rounded-xl flex items-center gap-3 transition-all duration-300 ${
+              className={`mt-6 p-4 sm:p-5 rounded-2xl flex items-center gap-3 sm:gap-4 transition-all duration-300 shadow-sm ${
                 status === 'solved'
                   ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
                   : status === 'wrong'
@@ -246,16 +237,16 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
               }`}
             >
               {status === 'solved' ? (
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="w-7 h-7 text-emerald-600 shrink-0" />
               ) : status === 'wrong' ? (
-                <XCircle className="w-6 h-6 text-rose-500 shrink-0" />
+                <XCircle className="w-7 h-7 text-rose-500 shrink-0" />
               ) : (
-                <Brain className="w-6 h-6 text-blue-500 shrink-0" />
+                <Brain className="w-7 h-7 text-blue-500 shrink-0" />
               )}
               <div>
-                <p className="text-sm font-bold">{feedbackMessage}</p>
+                <p className="text-sm sm:text-base font-black leading-tight">{feedbackMessage}</p>
                 {status === 'playing' && (
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
                     Mova a peça correta arrastando ou clicando nas casas.
                   </p>
                 )}
@@ -264,12 +255,12 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
 
             {/* Explanation when solved */}
             {status === 'solved' && (
-              <div className="mt-4 p-4 rounded-xl bg-blue-50/80 border border-blue-100 text-blue-950 text-xs">
-                <h4 className="font-bold text-blue-900 mb-1 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
+              <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-blue-50/80 border border-blue-100 text-blue-950 text-xs sm:text-sm shadow-inner">
+                <h4 className="font-black text-blue-900 mb-1.5 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                   Lição do Professor:
                 </h4>
-                <p className="leading-relaxed text-blue-800">{puzzle.explanation}</p>
+                <p className="leading-relaxed text-blue-800 font-medium">{puzzle.explanation}</p>
               </div>
             )}
 
@@ -277,10 +268,10 @@ export const PuzzleSolver: React.FC<PuzzleSolverProps> = ({
             {status === 'solved' && onNext && (
               <button
                 onClick={onNext}
-                className="mt-5 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition transform active:scale-98"
+                className="mt-6 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 active:scale-95 text-white font-black py-3.5 sm:py-4 px-4 rounded-2xl shadow-lg shadow-emerald-500/30 transition-all"
               >
                 <span>Próxima Atividade</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-5 h-5" />
               </button>
             )}
           </div>
