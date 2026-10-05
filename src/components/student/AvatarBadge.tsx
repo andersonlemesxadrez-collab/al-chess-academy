@@ -38,7 +38,6 @@ export const AvatarBadge: React.FC<AvatarBadgeProps> = ({
     );
   }
 
-  // Puxa as opções equipadas do aluno (ou ativa todas por defeito se for novo)
   const userEquipped = avatar?.equipped || {
     outfit: true,
     shoes: true,
@@ -53,7 +52,8 @@ export const AvatarBadge: React.FC<AvatarBadgeProps> = ({
       className={`relative flex items-center justify-center rounded-3xl shadow-lg border-2 border-white ring-4 ring-amber-400/40 select-none overflow-hidden shrink-0 ${sizeContainerClasses[size]}`}
       style={{ backgroundColor: avatar?.color || '#F59E0B' }}
     >
-      <div className="w-full h-full transform scale-125 origin-bottom">
+      {/* Enquadramento centralizado perfeito para ver o boneco inteiro e o chapéu */}
+      <div className="w-full h-full transform scale-[0.85] translate-y-2 flex items-center justify-center">
         <VectorAvatar
           outfit={userEquipped.outfit}
           shoes={userEquipped.shoes}
