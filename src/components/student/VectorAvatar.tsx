@@ -7,16 +7,16 @@ interface VectorAvatarProps {
   accessory?: boolean;
   item?: boolean;
   companion?: boolean;
-  size?: string; // ex: "w-full h-full" ou "w-32 h-32"
+  size?: string;
 }
 
 export const VectorAvatar: React.FC<VectorAvatarProps> = ({
-  outfit = true,
-  shoes = true,
-  hat = true,
-  accessory = true,
-  item = true,
-  companion = true,
+  outfit = false,
+  shoes = false,
+  hat = false,
+  accessory = false,
+  item = false,
+  companion = false,
   size = 'w-full h-full',
 }) => {
   return (
@@ -42,7 +42,7 @@ export const VectorAvatar: React.FC<VectorAvatarProps> = ({
         <g stroke="#4a3426" strokeWidth="7" strokeLinecap="round" fill="none"><path d="M445 262Q470 250 495 262"/><path d="M529 262Q554 250 579 262"/></g>
       </g>
 
-      {/* 2. OUTFIT (Roupa) */}
+      {/* 2. OUTFIT */}
       {outfit && (
         <g id="outfit">
           <g stroke="#f4f4f4" strokeWidth="62" strokeLinecap="round"><path d="M410 505L340 650"/><path d="M614 505L684 650"/></g>
@@ -66,7 +66,7 @@ export const VectorAvatar: React.FC<VectorAvatarProps> = ({
         </g>
       )}
 
-      {/* 4. CHAPÉU / CABELO */}
+      {/* 4. CHAPÉU */}
       {hat && (
         <g id="hat">
           <path d="M410 190L398 110L452 165Z M614 190L626 110L572 165Z" fill="#e8b830"/>
@@ -75,14 +75,14 @@ export const VectorAvatar: React.FC<VectorAvatarProps> = ({
         </g>
       )}
 
-      {/* 5. ACESSÓRIO FACIAL */}
+      {/* 5. ACESSÓRIO */}
       {accessory && (
         <g id="accessory">
           <path fillRule="evenodd" fill="#d6293a" d="M415 285Q512 250 609 285L602 335Q512 318 422 335Z M470 305m-24 0a24 30 0 1 0 48 0a24 30 0 1 0 -48 0 M554 305m-24 0a24 30 0 1 0 48 0a24 30 0 1 0 -48 0"/>
         </g>
       )}
 
-      {/* 6. ITEM NA MÃO */}
+      {/* 6. ITEM */}
       {item && (
         <g id="item">
           <circle cx="322" cy="640" r="46" fill="#fff" stroke="#15151a" strokeWidth="5"/>
@@ -92,7 +92,7 @@ export const VectorAvatar: React.FC<VectorAvatarProps> = ({
         </g>
       )}
 
-      {/* 7. MASCOTE / ACOMPANHANTE */}
+      {/* 7. COMPANHEIRO */}
       {companion && (
         <g id="companion">
           <g transform="translate(815 960)">
