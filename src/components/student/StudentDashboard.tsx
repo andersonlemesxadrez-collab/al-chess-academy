@@ -33,6 +33,11 @@ export const StudentDashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'pending' | 'completed' | 'all'>('pending');
   const [showVectorShop, setShowVectorShop] = useState(false); // <--- Estado unificado para o estúdio/loja vetorial
+  const [shopTab, setShopTab] = useState<'shop' | 'wardrobe' | 'colors'>('shop');
+  const openShop = (tab: 'shop' | 'wardrobe' | 'colors') => {
+    setShopTab(tab);
+    setShowVectorShop(true);
+  };
 
   if (!currentStudent) {
     return <div className="p-8 text-center text-slate-500 font-medium">Nenhum aluno selecionado.</div>;
@@ -72,10 +77,10 @@ export const StudentDashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full sm:w-auto">
             <div className="flex flex-col items-center shrink-0">
               <AvatarBadge student={currentStudent} size="xl" />
-              <div className="flex items-center gap-2 mt-3">
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
                 <button
                   type="button"
-                  onClick={() => setShowVectorShop(true)}
+                  onClick={() => openShop('wardrobe')}
                   className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-white/90 hover:bg-white px-3 py-1.5 rounded-full border border-blue-200 shadow-xs transition transform active:scale-95"
                 >
                   <Palette className="w-3.5 h-3.5 text-blue-600" />
@@ -83,7 +88,7 @@ export const StudentDashboard: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowVectorShop(true)}
+                  onClick={() => openShop('shop')}
                   className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200 shadow-xs transition transform active:scale-95"
                 >
                   <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
@@ -115,33 +120,33 @@ export const StudentDashboard: React.FC = () => {
           </div>
 
           {/* Indicadores de Estatísticas */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full md:w-auto shrink-0">
-            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-amber-200 shadow-xs flex-1 md:flex-none min-w-[90px]">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full md:w-auto shrink-0">
+            <div className="flex flex-col items-center justify-center text-center bg-white px-2 sm:px-4 py-3 rounded-2xl border border-amber-200 shadow-xs md:min-w-[96px]">
               <div className="flex items-center gap-1 text-amber-500 font-extrabold text-lg sm:text-xl">
                 <Flame className="w-5 h-5 fill-amber-400 text-amber-500 animate-bounce" />
                 <span>{currentStudent.streak}</span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5 leading-tight">
                 Dias Seguidos
               </span>
             </div>
 
-            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-blue-200 shadow-xs flex-1 md:flex-none min-w-[90px]">
+            <div className="flex flex-col items-center justify-center text-center bg-white px-2 sm:px-4 py-3 rounded-2xl border border-blue-200 shadow-xs md:min-w-[96px]">
               <div className="flex items-center gap-1 text-blue-600 font-extrabold text-lg sm:text-xl">
                 <Shield className="w-5 h-5 text-blue-500" />
                 <span>{currentStudent.streakShields}</span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5 leading-tight">
                 Escudo
               </span>
             </div>
 
-            <div className="flex flex-col items-center bg-white px-4 py-3 rounded-2xl border border-amber-200 shadow-xs flex-1 md:flex-none min-w-[90px]">
+            <div className="flex flex-col items-center justify-center text-center bg-white px-2 sm:px-4 py-3 rounded-2xl border border-amber-200 shadow-xs md:min-w-[96px]">
               <div className="flex items-center gap-1 text-[#F5C542] font-extrabold text-lg sm:text-xl">
                 <Award className="w-5 h-5 text-amber-500" />
                 <span className="text-slate-900">{currentStudent.xp}</span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5 leading-tight">
                 Pontos XP
               </span>
             </div>
@@ -150,7 +155,7 @@ export const StudentDashboard: React.FC = () => {
 
         {/* Barra de Progresso */}
         <div className="mt-6 pt-5 border-t border-slate-200/60">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-bold text-slate-600 mb-2">
             <span>Progresso para o próximo nível</span>
             <span className="text-blue-600 font-extrabold">
               {currentStudent.xp} / {nextRankXp} XP ({currentLevelProgress}%)
@@ -167,7 +172,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Abas com scroll suave no telemóvel */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             onClick={() => setActiveTab('pending')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap active:scale-95 ${
@@ -201,7 +206,7 @@ export const StudentDashboard: React.FC = () => {
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Biblioteca Livre ({contents.length})</span>
+            <span><span className="sm:hidden">Biblioteca</span><span className="hidden sm:inline">Biblioteca Livre</span> ({contents.length})</span>
           </button>
         </div>
 
@@ -404,7 +409,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Modal da Loja / Estúdio Vetorial */}
       {showVectorShop && (
-        <VectorShopModal onClose={() => setShowVectorShop(false)} />
+        <VectorShopModal initialTab={shopTab} onClose={() => setShowVectorShop(false)} />
       )}
     </div>
   );
