@@ -10,6 +10,9 @@ import { PuzzleSolver } from '../student/PuzzleSolver';
 import { GameViewer } from '../student/GameViewer';
 import { LessonViewer } from '../student/LessonViewer';
 import { GameAnalysisViewer } from '../student/GameAnalysisViewer';
+import { BotMatchViewer } from '../student/BotMatchViewer';
+import { PieceCaptureViewer } from '../student/PieceCaptureViewer';
+import { PawnBattleViewer } from '../student/PawnBattleViewer';
 import {
   Users,
   Plus,
@@ -26,6 +29,29 @@ import {
   Edit,
   Trash2
 } from 'lucide-react';
+
+type Gender = 'm' | 'f';
+
+// Seletor do personagem do avatar (rapaz / rapariga), usado nos formulários de aluno.
+const GenderPicker: React.FC<{ value: Gender; onChange: (g: Gender) => void }> = ({ value, onChange }) => (
+  <div>
+    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Personagem do Avatar</label>
+    <div className="grid grid-cols-2 gap-2">
+      {([['m', '👦 Rapaz'], ['f', '👧 Rapariga']] as [Gender, string][]).map(([g, label]) => (
+        <button
+          key={g}
+          type="button"
+          onClick={() => onChange(g)}
+          className={`py-2.5 rounded-xl text-xs font-bold border transition ${
+            value === g ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  </div>
+);
 
 export const TeacherDashboard: React.FC = () => {
   const {
@@ -54,6 +80,7 @@ export const TeacherDashboard: React.FC = () => {
   const [newStudentAge, setNewStudentAge] = useState(8);
   const [newStudentLevel, setNewStudentLevel] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Iniciante');
   const [newStudentKidsMode, setNewStudentKidsMode] = useState(true);
+  const [newStudentGender, setNewStudentGender] = useState<Gender>('m');
 
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editStudentName, setEditStudentName] = useState('');
@@ -61,6 +88,7 @@ export const TeacherDashboard: React.FC = () => {
   const [editStudentAge, setEditStudentAge] = useState(8);
   const [editStudentLevel, setEditStudentLevel] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Iniciante');
   const [editStudentKidsMode, setEditStudentKidsMode] = useState(true);
+  const [editStudentGender, setEditStudentGender] = useState<Gender>('m');
 
   const completedTasks = assignments.filter((a) => a.status === 'completed').length;
   const pendingTasks = assignments.filter((a) => a.status === 'pending').length;
@@ -75,15 +103,17 @@ export const TeacherDashboard: React.FC = () => {
       age: Number(newStudentAge),
       level: newStudentLevel,
       kidsMode: newStudentKidsMode,
+      // Avatar no formato do estúdio vetorial: começa só com o boneco base.
       avatar: {
-        base: newStudentKidsMode ? 'knight' : 'pawn',
         color: '#3B82F6',
-        hat: newStudentKidsMode ? 'cap' : undefined,
-      },
+        gender: newStudentGender,
+        equipped: {},
+      } as any,
     });
 
     setNewStudentName('');
     setNewStudentPassword('');
+    setNewStudentGender('m');
     setShowAddStudentModal(false);
   };
 
@@ -94,6 +124,7 @@ export const TeacherDashboard: React.FC = () => {
     setEditStudentAge(student.age || 8);
     setEditStudentLevel((student.level as any) || 'Iniciante');
     setEditStudentKidsMode(!!student.kidsMode);
+    setEditStudentGender(((student.avatar as any)?.gender as Gender) ?? 'm');
   };
 
   const handleEditStudentSubmit = (e: React.FormEvent) => {
@@ -106,6 +137,7 @@ export const TeacherDashboard: React.FC = () => {
       age: Number(editStudentAge),
       level: editStudentLevel,
       kidsMode: editStudentKidsMode,
+      avatar: { ...((editingStudent.avatar ?? {}) as any), gender: editStudentGender } as any,
     });
 
     setEditingStudent(null);
@@ -154,11 +186,9 @@ export const TeacherDashboard: React.FC = () => {
         {previewContent.type === 'game' && <GameViewer content={previewContent} onBack={() => setPreviewContent(null)} />}
         {previewContent.type === 'lesson' && <LessonViewer content={previewContent} onBack={() => setPreviewContent(null)} />}
         {previewContent.type === 'analysis' && <GameAnalysisViewer content={previewContent} onBack={() => setPreviewContent(null)} />}
-        {(previewContent.type === 'bot_match' || previewContent.type === 'piece_capture' || previewContent.type === 'pawn_battle') && (
-          <div className="text-center py-20 text-slate-500 font-bold px-4">
-            Nova interface de jogo sendo desenvolvida... Volte em breve!
-          </div>
-        )}
+        {previewContent.type === 'bot_match' && <BotMatchViewer content={previewContent} onBack={() => setPreviewContent(null)} />}
+        {previewContent.type === 'piece_capture' && <PieceCaptureViewer content={previewContent} onBack={() => setPreviewContent(null)} />}
+        {previewContent.type === 'pawn_battle' && <PawnBattleViewer content={previewContent} onBack={() => setPreviewContent(null)} />}
       </div>
     );
   }
@@ -391,6 +421,8 @@ export const TeacherDashboard: React.FC = () => {
                 <input type="checkbox" checked={newStudentKidsMode} onChange={(e) => setNewStudentKidsMode(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
               </div>
 
+              {newStudentKidsMode && <GenderPicker value={newStudentGender} onChange={setNewStudentGender} />}
+
               <div className="flex items-center justify-end gap-2 pt-5 border-t border-slate-100">
                 <button type="button" onClick={() => setShowAddStudentModal(false)} className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition">Cancelar</button>
                 <button type="submit" className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition active:scale-95">Cadastrar</button>
@@ -440,6 +472,8 @@ export const TeacherDashboard: React.FC = () => {
                 </div>
                 <input type="checkbox" checked={editStudentKidsMode} onChange={(e) => setEditStudentKidsMode(e.target.checked)} className="w-5 h-5 text-blue-600 rounded cursor-pointer" />
               </div>
+
+              {editStudentKidsMode && <GenderPicker value={editStudentGender} onChange={setEditStudentGender} />}
 
               <div className="flex items-center justify-end gap-2 pt-5 border-t border-slate-100">
                 <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition">Cancelar</button>
