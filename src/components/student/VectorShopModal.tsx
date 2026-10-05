@@ -29,7 +29,6 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
   const { currentStudent, updateStudent, triggerConfetti, role } = useApp();
   const isTeacher = role === 'teacher';
 
-  // Todos os hooks ficam ANTES de qualquer return condicional.
   const [activeTab, setActiveTab] = useState<'shop' | 'wardrobe' | 'colors'>('shop');
   const [activeCat, setActiveCat] = useState<Category>('outfit');
   const [equipped, setEquipped] = useState<Equipped>(() =>
@@ -44,7 +43,6 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
   const owned = (it: CatalogItem) => isTeacher || isOwned(inventory, it.category, it.id);
   const items = CATALOG.filter((it) => it.category === activeCat);
 
-  // Guarda no perfil do aluno. No modo professor é só pré-visualização local.
   const persist = (next: { equipped?: Equipped; color?: string; gender?: Gender; xp?: number; inventory?: string[] }) => {
     if (!currentStudent) return;
     const avatar = (currentStudent as any).avatar || {};
@@ -63,7 +61,7 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
   const handleBuy = (it: CatalogItem) => {
     if (!currentStudent) return;
     if (currentStudent.xp < it.cost) {
-      alert('Pontos XP insuficientes! Resolve mais exercícios para ganhares XP.');
+      alert('Pontos XP insuficientes! Resolva mais exercícios para ganhar XP.');
       return;
     }
     const nextEquipped = { ...equipped, [it.category]: it.id };
@@ -117,7 +115,7 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-6 h-6 text-amber-500" />
             <h2 className="text-lg sm:text-xl font-black text-slate-900">
-              {isTeacher ? 'Estúdio 3D (Modo Professor - Tudo Liberado)' : 'Estúdio & Loja Vetorial'}
+              {isTeacher ? 'Estúdio 3D (Modo Professor - Tudo Liberado)' : 'Estúdio e Loja Vetorial'}
             </h2>
           </div>
           <button onClick={onClose} aria-label="Fechar" className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition">
@@ -130,7 +128,7 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
           <div className="sm:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-600 animate-pulse" />
-              <span className="text-xs font-extrabold text-amber-900 uppercase">Teu Saldo de XP:</span>
+              <span className="text-xs font-extrabold text-amber-900 uppercase">Seu Saldo de XP:</span>
             </div>
             <div className="flex items-center gap-1.5 text-amber-700 font-black text-lg">
               <Award className="w-5 h-5 text-amber-500" />
@@ -149,8 +147,8 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
         {/* Abas principais */}
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2 shrink-0 overflow-x-auto">
           {tabBtn('shop', '🛍️ Loja XP (Comprar)', 'bg-amber-500')}
-          {tabBtn('wardrobe', '👕 Guarda-Roupa (Equipar)', 'bg-blue-600')}
-          {tabBtn('colors', '🎨 Personagem & Cor', 'bg-indigo-600')}
+          {tabBtn('wardrobe', '👕 Guarda-roupa (Equipar)', 'bg-blue-600')}
+          {tabBtn('colors', '🎨 Personagem e Cor', 'bg-indigo-600')}
         </div>
 
         {/* Categorias (loja e guarda-roupa) */}
@@ -215,7 +213,7 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
                       <div>
                         <h3 className="font-bold text-slate-700 text-sm">{it.label}</h3>
                         <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Lock className="w-3 h-3" /> Bloqueado (compra na Loja)
+                          <Lock className="w-3 h-3" /> Bloqueado (compre na Loja)
                         </span>
                       </div>
                     </div>
@@ -246,7 +244,7 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
               <div className="p-4 rounded-2xl border border-slate-200 bg-white">
                 <h3 className="font-bold text-slate-800 text-sm mb-3">Personagem:</h3>
                 <div className="flex gap-2">
-                  {([['m', '👦 Rapaz'], ['f', '👧 Rapariga']] as [Gender, string][]).map(([g, label]) => (
+                  {([['m', '👦 Menino'], ['f', '👧 Menina']] as [Gender, string][]).map(([g, label]) => (
                     <button
                       key={g}
                       onClick={() => handleGender(g)}
@@ -261,7 +259,7 @@ export const VectorShopModal: React.FC<VectorShopModalProps> = ({ onClose }) => 
               </div>
 
               <div className="p-4 rounded-2xl border border-slate-200 bg-white">
-                <h3 className="font-bold text-slate-800 text-sm mb-3">Escolhe a cor de fundo do teu perfil:</h3>
+                <h3 className="font-bold text-slate-800 text-sm mb-3">Escolha a cor de fundo do seu perfil:</h3>
                 <div className="flex flex-wrap gap-3">
                   {BG_COLORS.map((c) => (
                     <button
