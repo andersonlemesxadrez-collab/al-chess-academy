@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import type { Color, Square } from 'chess.js';
 import {
-  Activity, AlertTriangle, Bot, Brain, Crown, Flag,
-  Loader2, RotateCcw, Swords, Target, Trophy, Zap, X
+  Activity, AlertTriangle, Bot, Brain, Crown,
+  Loader2, Swords, Target, Trophy, Zap, X
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -19,10 +19,16 @@ interface BotLevel {
   elo: string;
   description: string;
   icon: LucideIcon;
+  /** setoption name Skill Level value X (0–20). Usado quando não há uciElo. */
   skill: number;
+  /** go depth Y */
   depth: number;
+  /** Teto de tempo por lance (ms) */
   movetime: number;
+  /** Chance de jogar um lance aleatório de propósito */
   blunderChance: number;
+  /** Elo para UCI_LimitStrength (1320–3190). Omitir = usa Skill Level. */
+  uciElo?: number;
 }
 
 const LEVELS: Record<LevelId, BotLevel> = {
@@ -34,17 +40,17 @@ const LEVELS: Record<LevelId, BotLevel> = {
   intermediate: {
     id: 'intermediate', label: 'Intermediário', elo: '~1600', icon: Target,
     description: 'Partidas sólidas, com pouco espaço para lances ingênuos.',
-    skill: 8, depth: 6, movetime: 400, blunderChance: 0.04,
+    skill: 8, depth: 6, movetime: 400, blunderChance: 0.04, uciElo: 1600,
   },
   advanced: {
     id: 'advanced', label: 'Avançado', elo: '~2200', icon: Activity,
     description: 'Pune erros táticos e converte vantagens pequenas.',
-    skill: 14, depth: 10, movetime: 1000, blunderChance: 0,
+    skill: 14, depth: 10, movetime: 1000, blunderChance: 0, uciElo: 2200,
   },
   master: {
     id: 'master', label: 'Mestre', elo: '~2600', icon: Crown,
     description: 'Jogo posicional e tático quase perfeito.',
-    skill: 18, depth: 14, movetime: 2000, blunderChance: 0,
+    skill: 18, depth: 14, movetime: 2000, blunderChance: 0, uciElo: 2600,
   },
   superhuman: {
     id: 'superhuman', label: 'Super-Humano', elo: '3500+', icon: Zap,
@@ -65,15 +71,24 @@ function findKing(game: Chess, color: Color): Square | null {
   return null;
 }
 
-function Board({ game, orientation, selected, targets, lastMove, onSquareClick }: any) {
+interface BoardProps {
+  game: Chess;
+  orientation: Color;
+  selected: Square | null;
+  targets: Square[];
+  lastMove: { from: string; to: string } | null;
+  onSquareClick: (sq: Square) => void;
+}
+
+function Board({ game, orientation, selected, targets, lastMove, onSquareClick }: BoardProps) {
   const files = orientation === 'w' ? FILES : [...FILES].reverse();
   const ranks = orientation === 'w' ? RANKS : [...RANKS].reverse();
   const checkSq = game.inCheck() ? findKing(game, game.turn()) : null;
 
   return (
     <div className="mx-auto grid aspect-square w-full max-w-[600px] select-none grid-cols-8 overflow-hidden rounded-lg border border-slate-700 shadow-xl">
-      {ranks.flatMap((r, ri) =>
-        files.map((f, fi) => {
+      {ranks.flatMap((r) =>
+        files.map((f) => {
           const sq = `${f}${r}` as Square;
           const dark = (FILES.indexOf(f) + Number(r)) % 2 === 1;
           const piece = game.get(sq);
@@ -95,6 +110,7 @@ function Board({ game, orientation, selected, targets, lastMove, onSquareClick }
                 </span>
               )}
               {isTarget && !piece && <span className="absolute z-10 h-1/4 w-1/4 rounded-full bg-blue-500/70" />}
+              {isTarget && piece && <span className="absolute inset-1 z-10 rounded-full ring-4 ring-blue-500/70" />}
             </button>
           );
         }),
@@ -124,6 +140,12 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
   const gameRef = useRef(new Chess());
   const engineRef = useRef<StockfishClient | null>(null);
 
+  // Refs com os valores mais recentes, para o efeito do diagnóstico rodar uma vez por partida
+  const studentRef = useRef(currentStudent);
+  const updateRef = useRef(updateStudent);
+  studentRef.current = currentStudent;
+  updateRef.current = updateStudent;
+
   const [engineStatus, setEngineStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [phase, setPhase] = useState<'setup' | 'playing' | 'finished'>('setup');
   const [levelId, setLevelId] = useState<LevelId>('intermediate');
@@ -141,16 +163,30 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
   const level = LEVELS[levelId];
   const game = gameRef.current;
 
+  /* --- Ciclo de vida do Web Worker (usa o endereço padrão do stockfishClient.ts) --- */
   useEffect(() => {
-    const client = new StockfishClient('/stockfish.js');
-    client.init().then(() => {
-      engineRef.current = client;
-      setEngineStatus('ready');
-    }).catch(() => setEngineStatus('error'));
+    const client = new StockfishClient();
+    let disposed = false;
 
-    return () => client.destroy();
+    client
+      .init()
+      .then(() => {
+        if (disposed) return;
+        engineRef.current = client;
+        setEngineStatus('ready');
+      })
+      .catch(() => {
+        if (!disposed) setEngineStatus('error');
+      });
+
+    return () => {
+      disposed = true;
+      engineRef.current = null;
+      client.destroy();
+    };
   }, []);
 
+  /* --- Aplicar lance --- */
   const commitMove = useCallback((m: { from: string; to: string; promotion?: string }) => {
     const g = gameRef.current;
     try {
@@ -162,6 +198,7 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
     } catch { return false; }
   }, []);
 
+  /* --- Detecta fim de jogo --- */
   useEffect(() => {
     if (phase !== 'playing') return;
     if (gameRef.current.isGameOver()) {
@@ -170,6 +207,7 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
     }
   }, [fen, phase, playerColor]);
 
+  /* --- Vez do bot --- */
   useEffect(() => {
     if (phase !== 'playing' || engineStatus !== 'ready') return;
     const g = gameRef.current;
@@ -183,6 +221,7 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
       try {
         let uci: string;
         if (Math.random() < level.blunderChance) {
+          // Erro proposital: lance legal aleatório
           const legal = g.moves({ verbose: true });
           const pick = legal[Math.floor(Math.random() * legal.length)];
           uci = `${pick.from}${pick.to}${pick.promotion ?? ''}`;
@@ -193,17 +232,20 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
 
         if (cancelled || uci === '(none)') return;
         commitMove({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
-      } catch {}
+      } catch {
+        /* busca interrompida */
+      }
     })();
 
     return () => { cancelled = true; engine.stop(); setThinking(false); };
   }, [fen, phase, engineStatus, playerColor, level, commitMove]);
 
+  /* --- Diagnóstico pedagógico: roda UMA vez quando a partida termina --- */
   useEffect(() => {
     if (phase !== 'finished') return;
     const engine = engineRef.current;
     const history = gameRef.current.history();
-    if (!engine || history.length < 6 || !currentStudent) {
+    if (!engine || history.length < 6 || !studentRef.current) {
       setDiagStatus('skipped');
       return;
     }
@@ -216,11 +258,12 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
         const rep = await analyzeGame({ moves: history, playerColor }, engine, { signal: ctrl.signal });
         if (ctrl.signal.aborted) return;
         setReport(rep);
-        
-        if (rep.weaknesses.length > 0) {
-          updateStudent(currentStudent.id, { 
-            weaknesses: mergeWeaknesses(currentStudent.weaknesses, rep.weaknesses),
-            xp: currentStudent.xp + 50
+
+        const student = studentRef.current; // versão mais recente do aluno
+        if (rep.weaknesses.length > 0 && student) {
+          updateRef.current(student.id, {
+            weaknesses: mergeWeaknesses(student.weaknesses, rep.weaknesses),
+            xp: student.xp + 50,
           });
         }
         setDiagStatus('done');
@@ -230,8 +273,11 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
     })();
 
     return () => ctrl.abort();
-  }, [phase, currentStudent, playerColor, updateStudent]);
+    // Roda só quando a fase muda. Incluir `currentStudent` reiniciaria a análise (e o XP) após cada updateStudent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
+  /* --- Ações --- */
   const startGame = async () => {
     const engine = engineRef.current;
     if (!engine) return;
@@ -239,10 +285,15 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
     setFen(gameRef.current.fen());
     setLastMove(null);
     setSelected(null);
+    setResult(null);
     setReport(null);
     setDiagStatus('idle');
     await engine.newGame();
-    engine.setOptions({ 'Skill Level': level.skill, UCI_LimitStrength: false });
+    engine.setOptions(
+      level.uciElo
+        ? { UCI_LimitStrength: true, UCI_Elo: level.uciElo }
+        : { UCI_LimitStrength: false, 'Skill Level': level.skill },
+    );
     setPhase('playing');
   };
 
@@ -293,11 +344,11 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-slate-100">
-             <div className="flex gap-2">
+            <div className="flex gap-2">
               <button onClick={() => setPlayerColor('w')} className={`px-4 py-2 rounded-xl text-sm font-bold ${playerColor === 'w' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}>Brancas</button>
               <button onClick={() => setPlayerColor('b')} className={`px-4 py-2 rounded-xl text-sm font-bold ${playerColor === 'b' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}>Pretas</button>
             </div>
-            
+
             <button
               onClick={startGame}
               disabled={engineStatus !== 'ready'}
@@ -307,6 +358,12 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
               {engineStatus === 'loading' ? 'Carregando Motor...' : 'Começar Partida'}
             </button>
           </div>
+
+          {engineStatus === 'error' && (
+            <p className="text-sm text-rose-600 font-medium text-center">
+              Não foi possível carregar o motor de xadrez. Recarregue a página.
+            </p>
+          )}
         </div>
       )}
 
@@ -319,9 +376,16 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
                 <level.icon className="w-5 h-5 text-blue-500" /> IA ({level.label})
               </h4>
               <p className="text-xs text-slate-500 mt-1 font-bold">Elo: {level.elo}</p>
-              {thinking && <p className="text-xs text-amber-600 mt-2 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> A IA está pensando...</p>}
+              {thinking && (
+                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> A IA está pensando...
+                </p>
+              )}
             </div>
-            <button onClick={() => { setResult({ outcome: 'loss', text: 'Você abandonou.' }); setPhase('finished'); }} className="w-full py-2.5 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-50 transition">
+            <button
+              onClick={() => { setResult({ outcome: 'loss', text: 'Você abandonou.' }); setPhase('finished'); }}
+              className="w-full py-2.5 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-50 transition"
+            >
               Abandonar Partida
             </button>
           </div>
@@ -339,22 +403,35 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
             <h4 className="font-black text-amber-900 flex items-center gap-2 mb-4">
               <Brain className="w-5 h-5" /> Diagnóstico da IA
             </h4>
-            
-            {diagStatus === 'running' && <p className="text-amber-700 font-medium flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Analisando seus erros e acertos...</p>}
-            {diagStatus === 'skipped' && <p className="text-amber-700 font-medium">A partida foi curta demais para um diagnóstico preciso.</p>}
-            
+
+            {diagStatus === 'running' && (
+              <p className="text-amber-700 font-medium flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Analisando seus erros e acertos...
+              </p>
+            )}
+            {diagStatus === 'skipped' && (
+              <p className="text-amber-700 font-medium">A partida foi curta demais para um diagnóstico preciso.</p>
+            )}
+            {diagStatus === 'error' && (
+              <p className="text-rose-700 font-medium flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" /> Não foi possível analisar esta partida.
+              </p>
+            )}
+
             {diagStatus === 'done' && report && (
               <div className="space-y-4">
                 <p className="text-sm font-medium text-amber-800 leading-relaxed">{report.summary}</p>
                 {report.weaknesses.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {report.weaknesses.map(w => <span key={w} className="bg-white border border-amber-300 text-amber-800 px-3 py-1 rounded-lg text-xs font-bold">{w}</span>)}
+                    {report.weaknesses.map((w) => (
+                      <span key={w} className="bg-white border border-amber-300 text-amber-800 px-3 py-1 rounded-lg text-xs font-bold">{w}</span>
+                    ))}
                   </div>
                 )}
               </div>
             )}
           </div>
-          
+
           <button onClick={() => setPhase('setup')} className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700">
             Jogar Novamente
           </button>
