@@ -12,7 +12,12 @@ import {
   ChevronDown,
 } from 'lucide-react';
 
-export const Navbar: React.FC = () => {
+// 1. Adicionamos a interface para receber a propriedade
+interface NavbarProps {
+  isTeacherLogged?: boolean;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ isTeacherLogged = false }) => {
   const {
     role,
     setRole,
@@ -57,35 +62,38 @@ export const Navbar: React.FC = () => {
 
         {/* Center / Role indicators & Student Selector */}
         <div className="flex items-center space-x-2 max-w-full py-1 overflow-x-auto no-scrollbar">
-          {/* Active Mode Pill */}
-          <div className="flex items-center bg-blue-950/80 p-1 rounded-xl border border-blue-800/60 shadow-inner shrink-0">
-            <button
-              onClick={() => setRole('teacher')}
-              className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                role === 'teacher'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-blue-300 hover:text-white'
-              }`}
-            >
-              <GraduationCap className="w-3.5 h-3.5 shrink-0" />
-              <span>Painel do Professor</span>
-            </button>
+          
+          {/* 2. SÓ MOSTRA OS BOTÕES DE MODO SE O PROFESSOR ESTIVER LOGADO */}
+          {isTeacherLogged && (
+            <div className="flex items-center bg-blue-950/80 p-1 rounded-xl border border-blue-800/60 shadow-inner shrink-0">
+              <button
+                onClick={() => setRole('teacher')}
+                className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  role === 'teacher'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-blue-300 hover:text-white'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+                <span>Painel do Professor</span>
+              </button>
 
-            <button
-              onClick={() => setRole('student')}
-              className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                role === 'student'
-                  ? 'bg-[#F5C542] text-slate-900 shadow-md font-bold'
-                  : 'text-blue-300 hover:text-white'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span>Visão do Aluno</span>
-            </button>
-          </div>
+              <button
+                onClick={() => setRole('student')}
+                className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  role === 'student'
+                    ? 'bg-[#F5C542] text-slate-900 shadow-md font-bold'
+                    : 'text-blue-300 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>Visão do Aluno</span>
+              </button>
+            </div>
+          )}
 
           {/* Student Selector / Restricted view */}
-          {role === 'teacher' ? (
+          {isTeacherLogged && role === 'teacher' ? (
             <div className="relative shrink-0">
               <div className="flex items-center gap-1.5 bg-[#24355A] hover:bg-[#2C3F6B] text-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-blue-800/80 text-xs font-medium cursor-pointer transition">
                 <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -94,6 +102,7 @@ export const Navbar: React.FC = () => {
                   onChange={(e) => setCurrentStudentId(e.target.value)}
                   className="bg-transparent text-white text-xs font-medium outline-none cursor-pointer pr-1 appearance-none max-w-[110px] sm:max-w-none truncate"
                 >
+                  <option value="" className="bg-[#1B2A4A]">Selecionar Aluno...</option>
                   {students.map((st) => (
                     <option key={st.id} value={st.id} className="bg-[#1B2A4A] text-white">
                       {st.name} ({st.age} anos • {st.kidsMode ? 'Lúdico' : 'Analítico'})

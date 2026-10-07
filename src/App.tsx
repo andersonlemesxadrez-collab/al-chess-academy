@@ -47,7 +47,7 @@ const MainContent: React.FC = () => {
   const isStudentLogged = role === 'student' && currentStudentId;
   const isTeacherActuallyLogged = role === 'teacher' && isTeacherLogged;
 
-  // Ecrã de Login Unificado (Otimizado para mobile e desktop)
+  // Ecrã de Login Unificado
   if (!isStudentLogged && !isTeacherActuallyLogged) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-950 flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-blue-500 selection:text-white">
@@ -124,13 +124,13 @@ const MainContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-blue-500 selection:text-white overflow-x-hidden">
       <div className="w-full">
-        <Navbar />
+        {/* Passamos o isTeacherLogged para esconder/mostrar os botões na Navbar */}
+        <Navbar isTeacherLogged={isTeacherLogged} />
         <main className="pb-16 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 w-full">
           {role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />}
         </main>
       </div>
 
-      {/* Rodapé Padrão Adaptável */}
       <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
