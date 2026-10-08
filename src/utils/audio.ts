@@ -18,6 +18,20 @@ class RealisticSoundManager {
     return this.ctx;
   }
 
+  /**
+   * iOS/Safari só liberam o áudio depois de um toque do usuário.
+   * Chame isto dentro de um clique (ex.: botão "Começar partida").
+   */
+  unlock() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.start(0);
+  }
+
   // Som seco e sólido (estilo Chess.com / Lichess)
   playMove() {
     const ctx = this.getContext();

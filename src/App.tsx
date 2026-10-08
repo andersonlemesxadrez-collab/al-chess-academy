@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/layout/Navbar';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
@@ -6,12 +6,29 @@ import { StudentDashboard } from './components/student/StudentDashboard';
 import { GraduationCap, Lock, User, ShieldAlert } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { role, setRole, currentStudentId, setCurrentStudentId, students } = useApp();
+  const { role, setRole, currentStudentId, setCurrentStudentId, students, setTeacherSession, isTeacherPreview } = useApp();
   
   const [isTeacherLogged, setIsTeacherLogged] = useState(false);
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // Avisa o contexto quando é o professor logado (para a prévia não gravar nada no aluno)
+  useEffect(() => {
+    setTeacherSession(isTeacherLogged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTeacherLogged]);
+
+  // Encerra a sessão (aluno ou professor) e volta para a tela de login.
+  const handleLogout = () => {
+    if (!window.confirm('Deseja sair da conta?')) return;
+    setIsTeacherLogged(false);
+    setCurrentStudentId('');
+    setRole('teacher'); // qualquer valor diferente de "aluno logado" leva à tela de login
+    setLoginName('');
+    setLoginPassword('');
+    setLoginError('');
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,8 +95,10 @@ const MainContent: React.FC = () => {
                   value={loginName}
                   onChange={(e) => setLoginName(e.target.value)}
                   placeholder="Ex: Gabriel Silva ou Anderson"
-                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-300 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition"
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-300 text-base sm:text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition"
                   autoFocus
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </div>
             </div>
@@ -96,7 +115,7 @@ const MainContent: React.FC = () => {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="Sua senha..."
-                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-300 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition"
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-300 text-base sm:text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition"
                 />
               </div>
             </div>
@@ -125,7 +144,12 @@ const MainContent: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-blue-500 selection:text-white overflow-x-hidden">
       <div className="w-full">
         {/* Passamos o isTeacherLogged para esconder/mostrar os botões na Navbar */}
-        <Navbar isTeacherLogged={isTeacherLogged} />
+        <Navbar isTeacherLogged={isTeacherLogged} onLogout={handleLogout} />
+        {isTeacherPreview && (
+          <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-xs font-bold text-center py-2 px-3">
+            Modo prévia do professor: o que for feito aqui não é registrado no aluno.
+          </div>
+        )}
         <main className="pb-16 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 w-full">
           {role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />}
         </main>

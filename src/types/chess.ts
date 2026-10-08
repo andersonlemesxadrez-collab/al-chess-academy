@@ -41,6 +41,8 @@ export type Student = {
   inventory?: string[];
   unlockedAvatars: string[];
   enrolledSince?: string;
+  /** Pontos fracos detectados pelo diagnóstico das partidas contra o bot. */
+  weaknesses?: string[];
 };
 
 export type ContentType = string;
@@ -91,3 +93,34 @@ export type BotMatchData = any;
 export type PieceCaptureData = any;
 export type PawnBattleData = any;
 export type LessonData = any;
+
+/** Partida contra o bot registrada no histórico (sem o PGN, que fica só com o professor). */
+export type GameRecord = {
+  id: string;
+  assignmentId?: string;
+  studentId: string;
+  contentId?: string;
+  level?: string;
+  playerColor: 'w' | 'b';
+  result: 'win' | 'loss' | 'draw';
+  reason?: string;
+  startFen?: string;
+  moves: string[];
+  diagnostics?: any;
+  durationSeconds?: number;
+  finishedAt: string;
+};
+
+export type NewGameInput = {
+  assignmentId?: string;
+  studentId: string;
+  contentId?: string;
+  level?: string;
+  playerColor: 'w' | 'b';
+  result: 'win' | 'loss' | 'draw';
+  reason?: string;
+  startFen?: string;
+  moves: string[];
+  pgn: string;
+  durationSeconds?: number;
+};

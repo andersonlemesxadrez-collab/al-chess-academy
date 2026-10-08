@@ -10,14 +10,17 @@ import {
   Award,
   Users,
   ChevronDown,
+  LogOut,
 } from 'lucide-react';
 
 // 1. Adicionamos a interface para receber a propriedade
 interface NavbarProps {
   isTeacherLogged?: boolean;
+  /** Encerra a sessão e volta para a tela de login. */
+  onLogout?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ isTeacherLogged = false }) => {
+export const Navbar: React.FC<NavbarProps> = ({ isTeacherLogged = false, onLogout }) => {
   const {
     role,
     setRole,
@@ -146,6 +149,19 @@ export const Navbar: React.FC<NavbarProps> = ({ isTeacherLogged = false }) => {
               <VolumeX className="w-4 h-4 text-slate-400" />
             )}
           </button>
+
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Sair da conta"
+              aria-label="Sair da conta"
+              className="flex items-center gap-1.5 min-h-[40px] px-2.5 sm:px-3 rounded-xl bg-blue-950/80 hover:bg-rose-600 text-blue-200 hover:text-white border border-blue-800/60 transition text-xs font-semibold active:scale-95"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
+          )}
         </div>
 
       </div>

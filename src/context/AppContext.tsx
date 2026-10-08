@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   Student,
   ContentItem,
@@ -6,6 +6,8 @@ import {
   ActivityLogEntry,
   UserRole,
   Achievement,
+  GameRecord,
+  NewGameInput,
 } from '../types/chess';
 import {
   INITIAL_STUDENTS,
@@ -28,6 +30,10 @@ interface AppContextType {
   achievements: Achievement[];
   currentStudent: Student | undefined;
   customCategories: string[];
+  /** Partidas contra o bot já concluídas (sem PGN). */
+  games: GameRecord[];
+  /** true quando o professor está vendo o app como aluno: nada é registrado. */
+  isTeacherPreview: boolean;
 
   // Actions
   setRole: (role: UserRole) => void;
@@ -48,6 +54,11 @@ interface AppContextType {
   completeTask: (assignmentId: string, timeSpentSeconds: number, attempts: number, firstTrySuccess: boolean) => void;
   triggerConfetti: () => void;
   resetAllData: () => void;
+  setTeacherSession: (active: boolean) => void;
+  saveGame: (game: NewGameInput) => Promise<string | null>;
+  attachGameDiagnostics: (gameId: string, diagnostics: any) => Promise<void>;
+  /** Só o painel do professor deve chamar esta função. */
+  fetchGamePgn: (gameId: string) => Promise<string | null>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -87,6 +98,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [assignments, setAssignments] = useState<TaskAssignment[]>(INITIAL_ASSIGNMENTS);
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>(INITIAL_ACTIVITY_LOGS);
   const [customCategories, setCustomCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [games, setGames] = useState<GameRecord[]>([]);
+  const [teacherSession, setTeacherSessionState] = useState(false);
+  // Impede concluir a mesma atividade duas vezes (cliques repetidos ou duas abas)
+  const completingRef = useRef<Set<string>>(new Set());
 
   // Carregar dados iniciais do Supabase na primeira execução
   useEffect(() => {
@@ -115,6 +130,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lastActiveDate: s.last_active_date,
             enrolledSince: s.enrolled_since,
             notes: s.notes,
+            weaknesses: Array.isArray(s.weaknesses) ? s.weaknesses : [],
           }));
           setStudents(formattedStudents);
         } else {
@@ -228,6 +244,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
+    async function loadGames() {
+      try {
+        // O PGN fica de fora de propósito: só o painel do professor o busca.
+        const { data, error } = await supabase
+          .from('games')
+          .select('id, assignment_id, student_id, content_id, level, player_color, result, reason, start_fen, moves, diagnostics, duration_seconds, finished_at')
+          .order('finished_at', { ascending: false });
+        if (error || !data) return;
+        setGames(
+          data.map((g: any) => ({
+            id: g.id,
+            assignmentId: g.assignment_id ?? undefined,
+            studentId: g.student_id,
+            contentId: g.content_id ?? undefined,
+            level: g.level ?? undefined,
+            playerColor: g.player_color,
+            result: g.result,
+            reason: g.reason ?? undefined,
+            startFen: g.start_fen ?? undefined,
+            moves: Array.isArray(g.moves) ? g.moves : [],
+            diagnostics: g.diagnostics ?? undefined,
+            durationSeconds: g.duration_seconds ?? undefined,
+            finishedAt: g.finished_at,
+          }))
+        );
+      } catch (err) {
+        console.error('Erro ao carregar partidas:', err);
+      }
+    }
+    loadGames();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('al_chess_role', role);
   }, [role]);
 
@@ -236,6 +285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentStudentId]);
 
   const currentStudent = students.find((s) => s.id === currentStudentId) || students[0];
+  const isTeacherPreview = teacherSession && role === 'student';
 
   const setRole = (newRole: UserRole) => {
     setRoleState(newRole);
@@ -327,6 +377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (data.rankName !== undefined) dbData.rank_name = data.rankName;
     if (data.streak !== undefined) dbData.streak = data.streak;
     if (data.maxStreak !== undefined) dbData.max_streak = data.maxStreak;
+    if (data.weaknesses !== undefined) dbData.weaknesses = data.weaknesses;
 
     await supabase.from('students').update(dbData).eq('id', studentId);
   };
@@ -540,6 +591,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const assignment = assignments.find((a) => a.id === assignmentId);
     if (!assignment) return;
 
+    // Prévia do professor não registra nada.
+    if (isTeacherPreview) return;
+    // Uma atividade só pode ser concluída uma vez (XP não pode ser repetido).
+    if (assignment.status === 'completed' || completingRef.current.has(assignmentId)) return;
+    completingRef.current.add(assignmentId);
+
     const content = contents.find((c) => c.id === assignment.contentId);
     const xpReward = content ? content.xpReward : 50;
 
@@ -626,6 +683,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActivityLogs((prev) => [newLog, ...prev]);
   };
 
+  const setTeacherSession = (active: boolean) => setTeacherSessionState(active);
+
+  const saveGame = async (game: NewGameInput): Promise<string | null> => {
+    const id = `game-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const finishedAt = new Date().toISOString();
+
+    const { error } = await supabase.from('games').insert({
+      id,
+      assignment_id: game.assignmentId ?? null,
+      student_id: game.studentId,
+      content_id: game.contentId ?? null,
+      level: game.level ?? null,
+      player_color: game.playerColor,
+      result: game.result,
+      reason: game.reason ?? null,
+      start_fen: game.startFen ?? null,
+      moves: game.moves,
+      duration_seconds: Math.round(game.durationSeconds ?? 0),
+      finished_at: finishedAt,
+    });
+    if (error) {
+      console.error('Erro ao salvar partida:', error);
+      return null;
+    }
+
+    const { error: pgnError } = await supabase.from('game_pgns').insert({ game_id: id, pgn: game.pgn });
+    if (pgnError) console.error('Erro ao salvar PGN:', pgnError);
+
+    const record: GameRecord = {
+      id,
+      assignmentId: game.assignmentId,
+      studentId: game.studentId,
+      contentId: game.contentId,
+      level: game.level,
+      playerColor: game.playerColor,
+      result: game.result,
+      reason: game.reason,
+      startFen: game.startFen,
+      moves: game.moves,
+      durationSeconds: game.durationSeconds,
+      finishedAt,
+    };
+    setGames((prev) => [record, ...prev]);
+    return id;
+  };
+
+  const attachGameDiagnostics = async (gameId: string, diagnostics: any) => {
+    setGames((prev) => prev.map((g) => (g.id === gameId ? { ...g, diagnostics } : g)));
+    const { error } = await supabase.from('games').update({ diagnostics }).eq('id', gameId);
+    if (error) console.error('Erro ao salvar diagnóstico:', error);
+  };
+
+  const fetchGamePgn = async (gameId: string): Promise<string | null> => {
+    const { data, error } = await supabase.from('game_pgns').select('pgn').eq('game_id', gameId).maybeSingle();
+    if (error || !data) return null;
+    return data.pgn as string;
+  };
+
   const resetAllData = () => {
     localStorage.clear();
     window.location.reload();
@@ -643,6 +758,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         achievements: ACHIEVEMENTS,
         currentStudent,
         customCategories,
+        games,
+        isTeacherPreview,
         setRole,
         setCurrentStudentId,
         toggleKidsMode,
@@ -661,6 +778,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         completeTask,
         triggerConfetti,
         resetAllData,
+        setTeacherSession,
+        saveGame,
+        attachGameDiagnostics,
+        fetchGamePgn,
       }}
     >
       {children}

@@ -4,6 +4,7 @@ import { Student, ContentItem } from '../../types/chess';
 import { AvatarBadge } from '../student/AvatarBadge';
 import { ContentEditorModal } from './ContentEditorModal';
 import { ContentLibrary } from './ContentLibrary';
+import { TeacherGamesPanel } from './TeacherGamesPanel';
 import { StudentReportModal } from './StudentReportModal';
 import { TaskAssignModal } from './TaskAssignModal';
 import { PuzzleSolver } from '../student/PuzzleSolver';
@@ -27,7 +28,9 @@ import {
   BookOpen,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  Bot,
+  ArrowLeft,
 } from 'lucide-react';
 
 type Gender = 'm' | 'f';
@@ -66,7 +69,7 @@ export const TeacherDashboard: React.FC = () => {
     deleteStudent,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'students' | 'library'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'library' | 'games'>('students');
 
   const [showContentModal, setShowContentModal] = useState(false);
   const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
@@ -163,6 +166,16 @@ export const TeacherDashboard: React.FC = () => {
     setEditingContent(null);
     setShowContentModal(true);
   };
+
+  const backToStudents = (
+    <button
+      type="button"
+      onClick={() => setActiveTab('students')}
+      className="flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+    >
+      <ArrowLeft className="w-4 h-4" /> Voltar aos alunos
+    </button>
+  );
 
   if (previewContent) {
     return (
@@ -293,6 +306,17 @@ export const TeacherDashboard: React.FC = () => {
           <BookOpen className="w-4 h-4" />
           <span>Banco de Atividades ({contents.length})</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('games')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition whitespace-nowrap ${
+            activeTab === 'games' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Bot className="w-4 h-4" />
+          <span>Bots e Partidas</span>
+        </button>
       </div>
 
       {/* Aba: Gestão de Alunos */}
@@ -374,7 +398,18 @@ export const TeacherDashboard: React.FC = () => {
 
       {/* Aba: Biblioteca */}
       {activeTab === 'library' && (
-        <ContentLibrary onEditContent={handleOpenEdit} onPreviewContent={(item) => setPreviewContent(item)} onCreateNew={handleOpenCreateNew} />
+        <div className="space-y-3">
+          {backToStudents}
+          <ContentLibrary onEditContent={handleOpenEdit} onPreviewContent={(item) => setPreviewContent(item)} onCreateNew={handleOpenCreateNew} />
+        </div>
+      )}
+
+      {/* Aba: Bots e Partidas (nível do bot, partidas e PGN) */}
+      {activeTab === 'games' && (
+        <div className="space-y-3">
+          {backToStudents}
+          <TeacherGamesPanel />
+        </div>
       )}
 
       {/* Modal: Editor de Conteúdo */}
@@ -390,22 +425,22 @@ export const TeacherDashboard: React.FC = () => {
             <form onSubmit={handleAddStudentSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Aluno *</label>
-                <input type="text" required value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} placeholder="Ex: Gabriel Silva" className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:border-blue-500" />
+                <input type="text" required value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} placeholder="Ex: Gabriel Silva" className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none focus:border-blue-500" />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Senha de Acesso *</label>
-                <input type="text" required value={newStudentPassword} onChange={(e) => setNewStudentPassword(e.target.value)} placeholder="Ex: xadrez123" className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:border-blue-500" />
+                <input type="text" required value={newStudentPassword} onChange={(e) => setNewStudentPassword(e.target.value)} placeholder="Ex: xadrez123" className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none focus:border-blue-500" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Idade</label>
-                  <input type="number" min={4} max={99} value={newStudentAge} onChange={(e) => { const val = Number(e.target.value); setNewStudentAge(val); setNewStudentKidsMode(val <= 10); }} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none" />
+                  <input type="number" min={4} max={99} value={newStudentAge} onChange={(e) => { const val = Number(e.target.value); setNewStudentAge(val); setNewStudentKidsMode(val <= 10); }} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nível</label>
-                  <select value={newStudentLevel} onChange={(e) => setNewStudentLevel(e.target.value as any)} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none bg-white">
+                  <select value={newStudentLevel} onChange={(e) => setNewStudentLevel(e.target.value as any)} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none bg-white">
                     <option value="Iniciante">Iniciante</option>
                     <option value="Intermediário">Intermediário</option>
                     <option value="Avançado">Avançado</option>
@@ -442,22 +477,22 @@ export const TeacherDashboard: React.FC = () => {
             <form onSubmit={handleEditStudentSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Aluno *</label>
-                <input type="text" required value={editStudentName} onChange={(e) => setEditStudentName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:border-blue-500" />
+                <input type="text" required value={editStudentName} onChange={(e) => setEditStudentName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none focus:border-blue-500" />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Senha de Acesso</label>
-                <input type="text" value={editStudentPassword} onChange={(e) => setEditStudentPassword(e.target.value)} placeholder="Deixe em branco p/ remover" className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:border-blue-500" />
+                <input type="text" value={editStudentPassword} onChange={(e) => setEditStudentPassword(e.target.value)} placeholder="Deixe em branco p/ remover" className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none focus:border-blue-500" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Idade</label>
-                  <input type="number" min={4} max={99} value={editStudentAge} onChange={(e) => setEditStudentAge(Number(e.target.value))} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none" />
+                  <input type="number" min={4} max={99} value={editStudentAge} onChange={(e) => setEditStudentAge(Number(e.target.value))} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nível</label>
-                  <select value={editStudentLevel} onChange={(e) => setEditStudentLevel(e.target.value as any)} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm outline-none bg-white">
+                  <select value={editStudentLevel} onChange={(e) => setEditStudentLevel(e.target.value as any)} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base sm:text-sm outline-none bg-white">
                     <option value="Iniciante">Iniciante</option>
                     <option value="Intermediário">Intermediário</option>
                     <option value="Avançado">Avançado</option>

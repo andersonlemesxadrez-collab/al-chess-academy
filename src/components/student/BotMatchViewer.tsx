@@ -1,173 +1,146 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import type { Color, Square } from 'chess.js';
-import {
-  Activity, AlertTriangle, Bot, Brain, Crown,
-  Loader2, Swords, Target, Trophy, Zap, X
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Flag, Loader2, Play, ShieldCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { StockfishClient } from '../../utils/stockfishClient';
 import { analyzeGame, mergeWeaknesses } from '../../utils/aiDiagnostics';
 import type { DiagnosticReport } from '../../utils/aiDiagnostics';
+import { BOT_LEVELS, BOT_LEVEL_LIST, getBotLevelId, thinkTime } from '../../utils/botLevels';
+import type { BotLevelId } from '../../utils/botLevels';
+import { getCheckSquare, playSoundForMove, safeGet, safeRemove, safeSet } from '../../utils/chessHelpers';
+import { sounds } from '../../utils/audio';
+import { ChessBoard } from '../chess/ChessBoard';
+import { GameReview } from './GameReview';
+import type { ContentItem, TaskAssignment } from '../../types/chess';
 
-type LevelId = 'beginner' | 'intermediate' | 'advanced' | 'master' | 'superhuman';
-
-interface BotLevel {
-  id: LevelId;
-  label: string;
-  elo: string;
-  description: string;
-  icon: LucideIcon;
-  /** setoption name Skill Level value X (0–20). Usado quando não há uciElo. */
-  skill: number;
-  /** go depth Y */
-  depth: number;
-  /** Teto de tempo por lance (ms) */
-  movetime: number;
-  /** Chance de jogar um lance aleatório de propósito */
-  blunderChance: number;
-  /** Elo para UCI_LimitStrength (1320–3190). Omitir = usa Skill Level. */
-  uciElo?: number;
+interface BotMatchViewerProps {
+  content: ContentItem;
+  assignment?: TaskAssignment;
+  onBack: () => void;
+  onNext?: () => void;
 }
 
-const LEVELS: Record<LevelId, BotLevel> = {
-  beginner: {
-    id: 'beginner', label: 'Iniciante', elo: '~1000', icon: Bot,
-    description: 'Joga rápido e comete erros propositais. Ótimo para pegar confiança.',
-    skill: 1, depth: 2, movetime: 150, blunderChance: 0.2,
-  },
-  intermediate: {
-    id: 'intermediate', label: 'Intermediário', elo: '~1600', icon: Target,
-    description: 'Partidas sólidas, com pouco espaço para lances ingênuos.',
-    skill: 8, depth: 6, movetime: 400, blunderChance: 0.04, uciElo: 1600,
-  },
-  advanced: {
-    id: 'advanced', label: 'Avançado', elo: '~2200', icon: Activity,
-    description: 'Pune erros táticos e converte vantagens pequenas.',
-    skill: 14, depth: 10, movetime: 1000, blunderChance: 0, uciElo: 2200,
-  },
-  master: {
-    id: 'master', label: 'Mestre', elo: '~2600', icon: Crown,
-    description: 'Jogo posicional e tático quase perfeito.',
-    skill: 18, depth: 14, movetime: 2000, blunderChance: 0, uciElo: 2600,
-  },
-  superhuman: {
-    id: 'superhuman', label: 'Super-Humano', elo: '3500+', icon: Zap,
-    description: 'Stockfish sem restrições. Imbatível, nível superior a um Grande Mestre.',
-    skill: 20, depth: 24, movetime: 5000, blunderChance: 0,
-  },
-};
-const LEVEL_LIST = Object.values(LEVELS);
-
-const GLYPH: Record<string, string> = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
-const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
-
-function findKing(game: Chess, color: Color): Square | null {
-  for (const row of game.board()) {
-    for (const cell of row) if (cell && cell.type === 'k' && cell.color === color) return cell.square;
-  }
-  return null;
-}
-
-interface BoardProps {
-  game: Chess;
-  orientation: Color;
-  selected: Square | null;
-  targets: Square[];
-  lastMove: { from: string; to: string } | null;
-  onSquareClick: (sq: Square) => void;
-}
-
-function Board({ game, orientation, selected, targets, lastMove, onSquareClick }: BoardProps) {
-  const files = orientation === 'w' ? FILES : [...FILES].reverse();
-  const ranks = orientation === 'w' ? RANKS : [...RANKS].reverse();
-  const checkSq = game.inCheck() ? findKing(game, game.turn()) : null;
-
-  return (
-    <div className="mx-auto grid aspect-square w-full max-w-[600px] select-none grid-cols-8 overflow-hidden rounded-lg border border-slate-700 shadow-xl">
-      {ranks.flatMap((r) =>
-        files.map((f) => {
-          const sq = `${f}${r}` as Square;
-          const dark = (FILES.indexOf(f) + Number(r)) % 2 === 1;
-          const piece = game.get(sq);
-          const isTarget = targets.includes(sq);
-          return (
-            <button
-              key={sq}
-              type="button"
-              onClick={() => onSquareClick(sq)}
-              className={`relative flex aspect-square items-center justify-center ${dark ? 'bg-slate-500' : 'bg-slate-300'} ${
-                selected === sq ? 'ring-4 ring-inset ring-blue-500' : ''
-              }`}
-            >
-              {(lastMove?.from === sq || lastMove?.to === sq) && <span className="absolute inset-0 bg-amber-500/35" />}
-              {checkSq === sq && <span className="absolute inset-0 bg-red-500/55" />}
-              {piece && (
-                <span className={`relative z-10 text-[clamp(1.6rem,8.5vw,3.3rem)] leading-none ${piece.color === 'w' ? 'text-white' : 'text-slate-900'}`}>
-                  {GLYPH[piece.type]}
-                </span>
-              )}
-              {isTarget && !piece && <span className="absolute z-10 h-1/4 w-1/4 rounded-full bg-blue-500/70" />}
-              {isTarget && piece && <span className="absolute inset-1 z-10 rounded-full ring-4 ring-blue-500/70" />}
-            </button>
-          );
-        }),
-      )}
-    </div>
-  );
-}
+type Outcome = 'win' | 'loss' | 'draw';
 
 interface GameResult {
-  outcome: 'win' | 'loss' | 'draw';
+  outcome: Outcome;
+  reason: string;
   text: string;
 }
 
-function describeResult(g: Chess, player: Color): GameResult {
-  if (g.isCheckmate()) {
-    return g.turn() === player
-      ? { outcome: 'loss', text: 'Xeque-mate. A IA venceu.' }
-      : { outcome: 'win', text: 'Incrível! Você venceu a IA!' };
-  }
-  if (g.isDraw()) return { outcome: 'draw', text: 'Empate.' };
-  return { outcome: 'draw', text: 'Fim de jogo.' };
+/** Partida em andamento, guardada no aparelho para continuar se o aluno sair ou recarregar. */
+interface SavedGame {
+  moves: string[];
+  color: Color;
+  elapsed: number;
 }
 
-export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
-  const { currentStudent, updateStudent } = useApp();
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const gameRef = useRef(new Chess());
+function isValidFen(fen?: string): fen is string {
+  if (!fen) return false;
+  try {
+    new Chess(fen);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function describeResult(g: Chess, player: Color, botName: string): GameResult {
+  if (g.isCheckmate()) {
+    return g.turn() === player
+      ? { outcome: 'loss', reason: 'checkmate', text: `Xeque-mate. O ${botName} venceu desta vez.` }
+      : { outcome: 'win', reason: 'checkmate', text: `Xeque-mate! Você venceu o ${botName}!` };
+  }
+  if (g.isStalemate()) return { outcome: 'draw', reason: 'stalemate', text: 'Empate por afogamento.' };
+  if (g.isInsufficientMaterial()) return { outcome: 'draw', reason: 'insufficient', text: 'Empate por falta de material.' };
+  if (g.isThreefoldRepetition()) return { outcome: 'draw', reason: 'repetition', text: 'Empate por repetição de posição.' };
+  return { outcome: 'draw', reason: 'draw', text: 'Empate.' };
+}
+
+function buildPgn(
+  g: Chess,
+  opts: { studentName: string; botName: string; color: Color; outcome: Outcome },
+): string {
+  const clean = (s: string) => s.replace(/["[\]\\]/g, '');
+  const whiteWins = (opts.outcome === 'win') === (opts.color === 'w');
+  const res = opts.outcome === 'draw' ? '1/2-1/2' : whiteWins ? '1-0' : '0-1';
+  const d = new Date();
+  const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  const student = clean(opts.studentName);
+  const bot = clean(opts.botName);
+  g.header(
+    'Event', 'AL Chess Academy',
+    'Site', 'AL Chess Academy',
+    'Date', date,
+    'White', opts.color === 'w' ? student : bot,
+    'Black', opts.color === 'w' ? bot : student,
+    'Result', res,
+  );
+  return g.pgn();
+}
+
+export const BotMatchViewer: React.FC<BotMatchViewerProps> = ({ content, assignment, onBack, onNext }) => {
+  const {
+    currentStudent,
+    updateStudent,
+    completeTask,
+    saveGame,
+    attachGameDiagnostics,
+    isTeacherPreview,
+    games,
+  } = useApp();
+
+  // Sem atividade atribuída (ou professor vendo como aluno) = prévia: nada é salvo.
+  const previewMode = !assignment || isTeacherPreview;
+
+  // Configuração vem da atividade, definida pelo professor
+  const cfg = content.data ?? {};
+  const startFen: string | undefined = isValidFen(cfg.startFen) ? cfg.startFen : undefined;
+  const colorSetting: 'w' | 'b' | 'random' = cfg.playerColor === 'b' || cfg.playerColor === 'random' ? cfg.playerColor : 'w';
+  const storageKey = !previewMode && assignment ? `al_chess_bot_${assignment.id}` : null;
+
+  const gameRef = useRef(new Chess(startFen));
   const engineRef = useRef<StockfishClient | null>(null);
+  const startedAtRef = useRef(Date.now());
+  const elapsedBaseRef = useRef(0);
+  const finishedOnceRef = useRef(false);
+  const resumedRef = useRef(false);
 
-  // Refs com os valores mais recentes, para o efeito do diagnóstico rodar uma vez por partida
+  // Valores mais recentes, para uso dentro de callbacks e efeitos de execução única
   const studentRef = useRef(currentStudent);
-  const updateRef = useRef(updateStudent);
+  const colorRef = useRef<Color>('w');
   studentRef.current = currentStudent;
-  updateRef.current = updateStudent;
 
   const [engineStatus, setEngineStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [phase, setPhase] = useState<'setup' | 'playing' | 'finished'>('setup');
-  const [levelId, setLevelId] = useState<LevelId>('intermediate');
-  const [playerColor, setPlayerColor] = useState<Color>('w');
+  const [phase, setPhase] = useState<'intro' | 'playing' | 'finished'>('intro');
+  const [levelId, setLevelId] = useState<BotLevelId>(getBotLevelId(content));
+  const [playerColor, setPlayerColor] = useState<Color>(colorSetting === 'b' ? 'b' : 'w');
 
   const [fen, setFen] = useState(gameRef.current.fen());
+  const [moves, setMoves] = useState<string[]>([]);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   const [selected, setSelected] = useState<Square | null>(null);
   const [thinking, setThinking] = useState(false);
   const [result, setResult] = useState<GameResult | null>(null);
+  const [confirmResign, setConfirmResign] = useState(false);
 
   const [diagStatus, setDiagStatus] = useState<'idle' | 'running' | 'done' | 'skipped' | 'error'>('idle');
   const [report, setReport] = useState<DiagnosticReport | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const level = LEVELS[levelId];
+  const level = BOT_LEVELS[levelId];
   const game = gameRef.current;
 
-  /* --- Ciclo de vida do Web Worker (usa o endereço padrão do stockfishClient.ts) --- */
+  // Se a partida desta atividade já foi registrada, o aluno só pode revê-la.
+  const existingGame = !previewMode && assignment ? games.find((g) => g.assignmentId === assignment.id) : undefined;
+
+  /* --- Ciclo de vida do Web Worker ---------------------------------- */
   useEffect(() => {
     const client = new StockfishClient();
     let disposed = false;
-
     client
       .init()
       .then(() => {
@@ -178,7 +151,6 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
       .catch(() => {
         if (!disposed) setEngineStatus('error');
       });
-
     return () => {
       disposed = true;
       engineRef.current = null;
@@ -186,50 +158,132 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
     };
   }, []);
 
-  /* --- Aplicar lance --- */
+  /* --- Guardar a partida em andamento no aparelho ------------------- */
+  const persistRef = useRef<(g: Chess) => void>(() => undefined);
+  persistRef.current = (g: Chess) => {
+    if (!storageKey) return;
+    const elapsed = elapsedBaseRef.current + (Date.now() - startedAtRef.current) / 1000;
+    const saved: SavedGame = { moves: g.history(), color: colorRef.current, elapsed };
+    safeSet(storageKey, JSON.stringify(saved));
+  };
+
+  /* --- Aplicar lance ------------------------------------------------- */
   const commitMove = useCallback((m: { from: string; to: string; promotion?: string }) => {
     const g = gameRef.current;
     try {
       const mv = g.move({ from: m.from, to: m.to, promotion: m.promotion ?? 'q' });
+      playSoundForMove(mv);
       setFen(g.fen());
+      setMoves(g.history());
       setLastMove({ from: mv.from, to: mv.to });
       setSelected(null);
+      persistRef.current(g);
       return true;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }, []);
 
-  /* --- Detecta fim de jogo --- */
+  /* --- Iniciar (ou retomar) a partida ------------------------------- */
+  async function startGame(resume?: SavedGame) {
+    const engine = engineRef.current;
+    if (!engine) return;
+    sounds.unlock(); // iOS: libera o áudio dentro do toque do usuário
+
+    const color: Color = resume?.color ?? (colorSetting === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : colorSetting);
+    colorRef.current = color;
+
+    const g = new Chess(startFen);
+    if (resume) {
+      for (const san of resume.moves) {
+        try {
+          g.move(san);
+        } catch {
+          break;
+        }
+      }
+    }
+    gameRef.current = g;
+
+    const hist = g.history({ verbose: true });
+    const last = hist[hist.length - 1];
+    setPlayerColor(color);
+    setFen(g.fen());
+    setMoves(g.history());
+    setLastMove(last ? { from: last.from, to: last.to } : null);
+    setSelected(null);
+
+    elapsedBaseRef.current = resume?.elapsed ?? 0;
+    startedAtRef.current = Date.now();
+
+    await engine.newGame();
+    engine.setOptions(
+      level.uciElo
+        ? { UCI_LimitStrength: true, UCI_Elo: level.uciElo }
+        : { UCI_LimitStrength: false, 'Skill Level': level.skill },
+    );
+
+    persistRef.current(g);
+    setPhase('playing');
+  }
+
+  /* --- Retomar partida salva (aluno saiu ou recarregou a página) ---- */
+  useEffect(() => {
+    if (engineStatus !== 'ready' || phase !== 'intro' || resumedRef.current || !storageKey || existingGame) return;
+    const raw = safeGet(storageKey);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as SavedGame;
+      if (Array.isArray(saved.moves) && (saved.color === 'w' || saved.color === 'b')) {
+        resumedRef.current = true;
+        startGame(saved);
+      }
+    } catch {
+      safeRemove(storageKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engineStatus, phase]);
+
+  /* --- Detecta fim de jogo ------------------------------------------- */
   useEffect(() => {
     if (phase !== 'playing') return;
     if (gameRef.current.isGameOver()) {
-      setResult(describeResult(gameRef.current, playerColor));
+      setResult(describeResult(gameRef.current, playerColor, level.kidName));
       setPhase('finished');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fen, phase, playerColor]);
 
-  /* --- Vez do bot --- */
+  /* --- Vez do bot ---------------------------------------------------- */
   useEffect(() => {
     if (phase !== 'playing' || engineStatus !== 'ready') return;
     const g = gameRef.current;
     const engine = engineRef.current;
     if (!engine || g.isGameOver() || g.turn() === playerColor) return;
 
-    setThinking(true);
     let cancelled = false;
+    setThinking(true);
 
     (async () => {
       try {
+        const started = Date.now();
+        const legal = g.moves({ verbose: true });
         let uci: string;
-        if (Math.random() < level.blunderChance) {
-          // Erro proposital: lance legal aleatório
-          const legal = g.moves({ verbose: true });
-          const pick = legal[Math.floor(Math.random() * legal.length)];
+
+        if (legal.length === 1 || Math.random() < level.blunderChance) {
+          // Lance forçado, ou erro proposital (níveis iniciais)
+          const pick = legal.length === 1 ? legal[0] : legal[Math.floor(Math.random() * legal.length)];
           uci = `${pick.from}${pick.to}${pick.promotion ?? ''}`;
         } else {
-          const res = await engine.search(g.fen(), { depth: level.depth, movetime: level.movetime });
+          const res = await engine.search(g.fen(), {
+            depth: level.depth,
+            movetime: thinkTime(level, g.history().length),
+          });
           uci = res.bestmove;
         }
 
+        const wait = level.minDelay - (Date.now() - started);
+        if (wait > 0) await delay(wait);
         if (cancelled || uci === '(none)') return;
         commitMove({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
       } catch {
@@ -237,206 +291,325 @@ export const BotMatchViewer = ({ onBack }: { onBack: () => void }) => {
       }
     })();
 
-    return () => { cancelled = true; engine.stop(); setThinking(false); };
+    return () => {
+      cancelled = true;
+      engine.stop();
+      setThinking(false);
+    };
   }, [fen, phase, engineStatus, playerColor, level, commitMove]);
 
-  /* --- Diagnóstico pedagógico: roda UMA vez quando a partida termina --- */
+  /* --- Fim da partida: salvar, concluir a atividade e analisar -------- */
   useEffect(() => {
-    if (phase !== 'finished') return;
-    const engine = engineRef.current;
-    const history = gameRef.current.history();
-    if (!engine || history.length < 6 || !studentRef.current) {
-      setDiagStatus('skipped');
-      return;
-    }
+    if (phase !== 'finished' || !result || finishedOnceRef.current) return;
+    finishedOnceRef.current = true;
 
-    const ctrl = new AbortController();
-    setDiagStatus('running');
+    const g = gameRef.current;
+    const history = g.history();
+    const color = playerColor;
+    const seconds = Math.round(elapsedBaseRef.current + (Date.now() - startedAtRef.current) / 1000);
 
     (async () => {
-      try {
-        const rep = await analyzeGame({ moves: history, playerColor }, engine, { signal: ctrl.signal });
-        if (ctrl.signal.aborted) return;
-        setReport(rep);
+      let gameId: string | null = null;
+      const student = studentRef.current;
 
-        const student = studentRef.current; // versão mais recente do aluno
-        if (rep.weaknesses.length > 0 && student) {
-          updateRef.current(student.id, {
-            weaknesses: mergeWeaknesses(student.weaknesses, rep.weaknesses),
-            xp: student.xp + 50,
+      // 1) Registrar a partida e concluir a atividade (uma única vez)
+      if (!previewMode && assignment && student) {
+        setSaveStatus('saving');
+        const pgn = buildPgn(g, {
+          studentName: student.name,
+          botName: level.kidName,
+          color,
+          outcome: result.outcome,
+        });
+        gameId = await saveGame({
+          assignmentId: assignment.id,
+          studentId: student.id,
+          contentId: content.id,
+          level: levelId,
+          playerColor: color,
+          result: result.outcome,
+          reason: result.reason,
+          startFen,
+          moves: history,
+          pgn,
+          durationSeconds: seconds,
+        });
+        setSaveStatus(gameId ? 'saved' : 'error');
+        completeTask(assignment.id, seconds, 1, result.outcome === 'win');
+        if (storageKey) safeRemove(storageKey);
+      }
+
+      // 2) Diagnóstico pedagógico
+      const engine = engineRef.current;
+      if (history.length < 6 || !engine) {
+        setDiagStatus('skipped');
+        return;
+      }
+      setDiagStatus('running');
+      try {
+        const input = startFen ? { pgn: g.pgn(), playerColor: color } : { moves: history, playerColor: color };
+        const rep = await analyzeGame(input, engine);
+        setReport(rep);
+        setDiagStatus('done');
+
+        if (!previewMode && gameId) {
+          const compact = { ...rep, blunders: rep.blunders.map(({ fenBefore, ...b }) => b) };
+          attachGameDiagnostics(gameId, compact);
+        }
+        if (!previewMode && student && rep.weaknesses.length > 0) {
+          updateStudent(student.id, {
+            weaknesses: mergeWeaknesses(studentRef.current?.weaknesses, rep.weaknesses),
           });
         }
-        setDiagStatus('done');
       } catch {
-        if (!ctrl.signal.aborted) setDiagStatus('error');
+        setDiagStatus('error');
       }
     })();
-
-    return () => ctrl.abort();
-    // Roda só quando a fase muda. Incluir `currentStudent` reiniciaria a análise (e o XP) após cada updateStudent.
+    // Roda uma vez por partida. Incluir as funções do contexto reiniciaria a análise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, result]);
 
-  /* --- Ações --- */
-  const startGame = async () => {
-    const engine = engineRef.current;
-    if (!engine) return;
-    gameRef.current = new Chess();
-    setFen(gameRef.current.fen());
-    setLastMove(null);
-    setSelected(null);
-    setResult(null);
-    setReport(null);
-    setDiagStatus('idle');
-    await engine.newGame();
-    engine.setOptions(
-      level.uciElo
-        ? { UCI_LimitStrength: true, UCI_Elo: level.uciElo }
-        : { UCI_LimitStrength: false, 'Skill Level': level.skill },
-    );
-    setPhase('playing');
+  /* --- Ações --------------------------------------------------------- */
+  const resign = () => {
+    setConfirmResign(false);
+    setResult({ outcome: 'loss', reason: 'resign', text: 'Você desistiu da partida.' });
+    setPhase('finished');
   };
 
-  const targets: Square[] = selected ? game.moves({ square: selected, verbose: true }).map((m) => m.to) : [];
+  const targets: string[] = selected ? game.moves({ square: selected, verbose: true }).map((m) => m.to) : [];
 
-  const onSquareClick = (sq: Square) => {
+  const onSquareClick = (sq: string) => {
     if (phase !== 'playing' || game.turn() !== playerColor) return;
-    if (selected && targets.includes(sq)) { commitMove({ from: selected, to: sq }); return; }
-    const piece = game.get(sq);
-    setSelected(piece && piece.color === playerColor ? sq : null);
+    if (selected && targets.includes(sq)) {
+      commitMove({ from: selected, to: sq });
+      return;
+    }
+    const piece = game.get(sq as Square);
+    setSelected(piece && piece.color === playerColor ? (sq as Square) : null);
   };
 
-  return (
-    <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-200 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <Brain className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-black text-slate-900">Treinamento com IA</h2>
+  const LevelIcon = level.icon;
+  const finish = () => (onNext ? onNext() : onBack());
+
+  /* ================================================================== */
+  /* Telas                                                               */
+  /* ================================================================== */
+
+  const backButton = (label = 'Voltar') => (
+    <button
+      type="button"
+      onClick={onBack}
+      className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+    >
+      <ArrowLeft className="h-4 w-4" /> {label}
+    </button>
+  );
+
+  // Atividade já feita: só revisão
+  if (existingGame && phase === 'intro') {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 px-3 py-4 sm:px-4">
+        {backButton()}
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">
+          <CheckCircle2 className="h-5 w-5 shrink-0" /> Você já jogou esta atividade. Aqui está a revisão da partida.
         </div>
-        <button onClick={onBack} className="p-2 text-slate-400 hover:text-slate-700 rounded-xl transition">
-          <X className="w-5 h-5" />
-        </button>
+        <GameReview
+          moves={existingGame.moves}
+          orientation={existingGame.playerColor}
+          startFen={existingGame.startFen}
+          blunders={existingGame.diagnostics?.blunders}
+          summary={existingGame.diagnostics?.summary}
+        />
       </div>
+    );
+  }
 
-      {phase === 'setup' && (
-        <div className="space-y-6">
-          <p className="text-sm text-slate-500 font-medium text-center">
-            Escolha a dificuldade. Ao final, a IA analisa seus lances e registra os seus pontos fracos para o professor.
-          </p>
+  if (phase === 'intro') {
+    const colorText =
+      colorSetting === 'random' ? 'A cor será sorteada.' : colorSetting === 'b' ? 'Você joga com as peças pretas.' : 'Você joga com as peças brancas.';
+    const canStart = engineStatus === 'ready';
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {LEVEL_LIST.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => setLevelId(l.id)}
-                className={`flex flex-col gap-2 rounded-xl border p-4 text-left transition-colors ${
-                  l.id === levelId ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                }`}
-              >
-                <l.icon className={`h-6 w-6 ${l.id === 'superhuman' ? 'text-amber-500' : 'text-blue-500'}`} />
-                <div>
-                  <p className="font-bold text-slate-800">{l.label}</p>
-                  <p className="text-xs font-bold text-slate-500">Elo {l.elo}</p>
-                </div>
-                <p className="text-xs text-slate-500 leading-tight">{l.description}</p>
-              </button>
-            ))}
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 px-3 py-4 sm:px-4">
+        {backButton()}
+        <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-blue-50">
+            <LevelIcon className="h-10 w-10 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-900 sm:text-2xl">{content.title}</h2>
+            <p className="mt-1 text-sm font-semibold text-slate-500">Adversário: {level.kidName}</p>
+            {content.description && <p className="mx-auto mt-3 max-w-md text-sm text-slate-500">{content.description}</p>}
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-slate-100">
-            <div className="flex gap-2">
-              <button onClick={() => setPlayerColor('w')} className={`px-4 py-2 rounded-xl text-sm font-bold ${playerColor === 'w' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}>Brancas</button>
-              <button onClick={() => setPlayerColor('b')} className={`px-4 py-2 rounded-xl text-sm font-bold ${playerColor === 'b' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}>Pretas</button>
+          <p className="text-sm font-bold text-slate-700">{colorText}</p>
+
+          {!previewMode && (
+            <p className="mx-auto flex max-w-md items-start gap-2 rounded-2xl bg-amber-50 p-3 text-left text-xs font-semibold text-amber-800">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              Você joga esta partida uma única vez. Se sair no meio, ela continua de onde parou quando você voltar.
+            </p>
+          )}
+
+          {previewMode && (
+            <div className="space-y-2 rounded-2xl border border-dashed border-amber-300 bg-amber-50 p-4 text-left">
+              <p className="text-xs font-bold text-amber-800">Prévia do professor: nada será salvo. Teste outro nível:</p>
+              <div className="flex flex-wrap gap-2">
+                {BOT_LEVEL_LIST.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setLevelId(l.id)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                      l.id === levelId ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {l.label} ({l.elo})
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
 
-            <button
-              onClick={startGame}
-              disabled={engineStatus !== 'ready'}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3 font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-            >
-              {engineStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Swords className="h-5 w-5" />}
-              {engineStatus === 'loading' ? 'Carregando Motor...' : 'Começar Partida'}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => startGame()}
+            disabled={!canStart}
+            className="mx-auto flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-8 py-3 text-base font-black text-white shadow-md transition hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {engineStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />}
+            {engineStatus === 'loading' ? 'Preparando o robô...' : 'Começar partida'}
+          </button>
 
           {engineStatus === 'error' && (
-            <p className="text-sm text-rose-600 font-medium text-center">
-              Não foi possível carregar o motor de xadrez. Recarregue a página.
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-rose-600">
+              <AlertTriangle className="h-4 w-4" /> Não foi possível carregar o robô. Recarregue a página.
             </p>
           )}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {phase === 'playing' && (
-        <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start justify-center">
-          <Board game={game} orientation={playerColor} selected={selected} targets={targets} lastMove={lastMove} onSquareClick={onSquareClick} />
-          <div className="w-full lg:w-64 space-y-4">
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                <level.icon className="w-5 h-5 text-blue-500" /> IA ({level.label})
-              </h4>
-              <p className="text-xs text-slate-500 mt-1 font-bold">Elo: {level.elo}</p>
-              {thinking && (
-                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> A IA está pensando...
-                </p>
-              )}
+  if (phase === 'playing') {
+    const myTurn = game.turn() === playerColor;
+    return (
+      <div className="mx-auto max-w-5xl space-y-3 px-3 py-4 sm:px-4">
+        <div className="flex items-center justify-between gap-2">
+          {backButton('Sair')}
+          <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
+            <LevelIcon className="h-4 w-4 text-blue-600" />
+            {level.kidName}
+          </div>
+        </div>
+
+        <div
+          className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black ${
+            myTurn ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+          }`}
+        >
+          {myTurn ? (
+            'Sua vez!'
+          ) : (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> {thinking ? `${level.kidName} está pensando...` : 'Aguarde...'}
+            </>
+          )}
+        </div>
+
+        <ChessBoard
+          fen={fen}
+          orientation={playerColor}
+          selected={selected}
+          targets={targets}
+          lastMove={lastMove}
+          checkSquare={getCheckSquare(fen)}
+          onSquareClick={onSquareClick}
+        />
+
+        <div className="mx-auto flex max-w-[600px] items-center justify-between gap-3">
+          <span className="text-xs font-semibold text-slate-500">
+            {moves.length === 0 ? 'Nenhum lance ainda' : `${Math.ceil(moves.length / 2)} lance(s) • último: ${moves[moves.length - 1]}`}
+          </span>
+
+          {confirmResign ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-600">Desistir?</span>
+              <button
+                type="button"
+                onClick={resign}
+                className="min-h-[40px] rounded-xl bg-rose-600 px-4 text-xs font-bold text-white transition active:scale-95"
+              >
+                Sim
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmResign(false)}
+                className="min-h-[40px] rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition active:scale-95"
+              >
+                Não
+              </button>
             </div>
+          ) : (
             <button
-              onClick={() => { setResult({ outcome: 'loss', text: 'Você abandonou.' }); setPhase('finished'); }}
-              className="w-full py-2.5 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-50 transition"
+              type="button"
+              onClick={() => setConfirmResign(true)}
+              className="flex min-h-[40px] items-center gap-1.5 rounded-xl border border-rose-200 px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-50 active:scale-95"
             >
-              Abandonar Partida
+              <Flag className="h-3.5 w-3.5" /> Desistir
             </button>
-          </div>
+          )}
         </div>
+      </div>
+    );
+  }
+
+  // phase === 'finished'
+  const blunders = report?.blunders.map((b) => ({
+    ply: b.ply,
+    san: b.san,
+    category: b.category,
+    cpLoss: b.cpLoss,
+    bestReply: b.bestReply,
+  }));
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-4 px-3 py-4 sm:px-4">
+      {backButton('Voltar às atividades')}
+      <GameReview
+        moves={moves}
+        orientation={playerColor}
+        startFen={startFen}
+        blunders={blunders}
+        result={result}
+        summary={report?.summary}
+        analyzing={diagStatus === 'running'}
+        analysisFailed={diagStatus === 'error'}
+      />
+
+      {previewMode && (
+        <p className="rounded-xl bg-amber-50 p-3 text-center text-xs font-bold text-amber-800">Prévia do professor: esta partida não foi registrada.</p>
+      )}
+      {saveStatus === 'error' && (
+        <p className="rounded-xl bg-amber-50 p-3 text-center text-xs font-bold text-amber-800">
+          Sua partida valeu, mas não conseguimos guardá-la no histórico agora. Avise o professor.
+        </p>
       )}
 
-      {phase === 'finished' && result && (
-        <div className="py-6 space-y-6 max-w-2xl mx-auto">
-          <div className={`p-4 rounded-2xl border flex items-center gap-3 ${result.outcome === 'win' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-800'}`}>
-            <Trophy className={`w-6 h-6 ${result.outcome === 'win' ? 'text-emerald-500' : 'text-slate-400'}`} />
-            <h3 className="font-bold text-lg">{result.text}</h3>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6">
-            <h4 className="font-black text-amber-900 flex items-center gap-2 mb-4">
-              <Brain className="w-5 h-5" /> Diagnóstico da IA
-            </h4>
-
-            {diagStatus === 'running' && (
-              <p className="text-amber-700 font-medium flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Analisando seus erros e acertos...
-              </p>
-            )}
-            {diagStatus === 'skipped' && (
-              <p className="text-amber-700 font-medium">A partida foi curta demais para um diagnóstico preciso.</p>
-            )}
-            {diagStatus === 'error' && (
-              <p className="text-rose-700 font-medium flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" /> Não foi possível analisar esta partida.
-              </p>
-            )}
-
-            {diagStatus === 'done' && report && (
-              <div className="space-y-4">
-                <p className="text-sm font-medium text-amber-800 leading-relaxed">{report.summary}</p>
-                {report.weaknesses.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {report.weaknesses.map((w) => (
-                      <span key={w} className="bg-white border border-amber-300 text-amber-800 px-3 py-1 rounded-lg text-xs font-bold">{w}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <button onClick={() => setPhase('setup')} className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold shadow-md hover:bg-blue-700">
-            Jogar Novamente
-          </button>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={finish}
+        disabled={saveStatus === 'saving'}
+        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3.5 text-base font-black text-white shadow-md transition hover:bg-blue-700 active:scale-95 disabled:opacity-60"
+      >
+        {saveStatus === 'saving' ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" /> Salvando...
+          </>
+        ) : (
+          'Concluir'
+        )}
+      </button>
     </div>
   );
 };
